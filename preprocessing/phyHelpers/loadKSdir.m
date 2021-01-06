@@ -82,6 +82,14 @@ temps = readNPY(fullfile(ksDir, 'templates.npy'));
 
 winv = readNPY(fullfile(ksDir, 'whitening_mat_inv.npy'));
 
+% Han Hou 2021
+if exist(fullfile(ksDir, 'events.csv')) 
+    eventFile = fullfile(ksDir, 'events.csv');
+    events = csvread(eventFile);
+
+end
+
+
 spikeStruct.st = st;
 spikeStruct.spikeTemplates = spikeTemplates;
 spikeStruct.clu = clu;
@@ -94,3 +102,6 @@ spikeStruct.temps = temps;
 spikeStruct.winv = winv;
 spikeStruct.pcFeat = pcFeat;
 spikeStruct.pcFeatInd = pcFeatInd;
+spikeStruct.events = events;
+
+spikeStruct.gain = 0.6/512/500*1e6; % Hardcoded. Maybe wrong!!!

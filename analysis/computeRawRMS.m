@@ -24,7 +24,7 @@ end
 % one-sec segments (or longer) from various points in the file. But this is
 % probably ok, doubt it makes much difference, haven't tested.
 fid = fopen(rawFilename, 'r');
-rawDat = fread(fid, [nCh Fs*10], 'int16=>double');
+rawDat = fread(fid, [nCh Fs*1], 'int16=>double');
 fclose(fid);
 
 chanMap = readNPY(fullfile(ksDir, 'channel_map.npy'));

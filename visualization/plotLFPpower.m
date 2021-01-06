@@ -1,5 +1,4 @@
-
-function f = plotLFPpower(F, allPowerEst, dispRange, marginalChans, freqBands)
+function f = plotLFPpower(F, allPowerEst, dispRange, marginalChans, freqBands, lfpSurface)
 % function plotLFPpower(F, allPowerEst, dispRange, marginalChans, freqBands)
 %
 % Plots LFP power across the probe, depth by frequency, as colormap
@@ -17,10 +16,12 @@ subplot(4,4,[5 6 7 9 10 11 13 14 15]);
 imagesc(F(dispF), (0:nC-1)*10, 10*log10(allPowerEst(:,dispF)));
 xlim(dispRange);
 xlabel('frequency (Hz)');
-set(gca, 'YDir', 'normal');
-ylabel('depth on probe (µm)');
+set(gca, 'YDir', 'normal'); hold on;
+plot(xlim(), [lfpSurface lfpSurface]*10, 'r--', 'linew', 2); 
+ylabel('depth on probe (um)');
 % h = colorbar;
 % h.Label.String = 'power (dB)';
+title(sprintf('LFP surface = %g um', lfpSurface*10));
 makepretty
 
 ax = subplot(4,4,1:3); hold on;
@@ -28,7 +29,7 @@ set(ax, 'ColorOrder', copper(length(marginalChans)));
 plot(F(dispF), 10*log10(allPowerEst(marginalChans,dispF)));
 ylabel('power (dB)');
 set(ax, 'XTick', []);
-hleg = legend(array2stringCell(marginalChans*10));
+hleg = legend(arrayfun(@num2str, marginalChans*10, 'un', 0));
 set(hleg, 'Position', [0.7125    0.7607    0.1036    0.2083]);
 makepretty;
 
@@ -41,6 +42,7 @@ for q = 1:length(freqBands)
     thisPow = mean(10*log10(allPowerEst(:,inclF)),2);
     plot(thisPow, (0:nC-1)*10);
 end
+plot(xlim(), [lfpSurface lfpSurface]*10, 'r--', 'linew', 2); 
 set(ax, 'YTick', []);
 ylim([0 nC(end)*10])
 xlabel('power (dB)');

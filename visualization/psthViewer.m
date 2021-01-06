@@ -1,6 +1,6 @@
 
 
-function psthViewer(spikeTimes, clu, eventTimes, window, trGroups)
+function psthViewer(spikeTimes, clu, eventTimes, window, trGroups, otherTimeMarkers)
 % function psthViewer(spikeTimes, clu, eventTimes, window, trGroups)
 %
 % Controls:
@@ -22,6 +22,10 @@ function psthViewer(spikeTimes, clu, eventTimes, window, trGroups)
 % different graded color scheme for each, overlay the traces in the tuning
 % curve view, and also provide a 2-d image of tuning curve
 % - add support for plot labels (traces in psth, x-axis in tuning curve)
+
+if nargin < 6
+    otherTimeMarkers = [];
+end
 
 fprintf(1, 'Controls:\n')
 fprintf(1, '- left/right arrow: select previous/next cluster\n')
@@ -56,6 +60,7 @@ myData.trGroups = trGroups(:);
 myData.clusterIDs = unique(clu);
 myData.trGroupLabels = unique(myData.trGroups);
 myData.nGroups = length(myData.trGroupLabels);
+myData.otherTimeMarkers = otherTimeMarkers;
 myData.plotAxes = [];
 
 params.colors = copper(myData.nGroups); params.colors = params.colors(:, [3 2 1]);
@@ -165,19 +170,29 @@ yl = ylim();
 hold on;
 plot(myData.params.startRange*[1 1], yl, 'k--');
 plot(myData.params.stopRange*[1 1], yl, 'k--');
+for i = 1:length(myData.otherTimeMarkers)
+    x = myData.otherTimeMarkers(i);
+    plot(x*[1 1], yl, 'b--');
+end
 makepretty;
 box off;
 
 % subplot(3,1,2);
 axes(myData.plotAxes(2));
 hold off;
-plot(rasterX,rasterY, 'k');
+plot(rasterX,rasterY, 'k'); hold on;
 xlim(myData.params.window);
 ylim([0 length(myData.eventTimes)+1]);
+for i = 1:length(myData.otherTimeMarkers)
+    x = myData.otherTimeMarkers(i);
+    plot(x*[1 1], ylim(), 'b--');
+end
 ylabel('event number');
 xlabel('time (sec)');
 makepretty;
 box off;
+
+linkaxes([myData.plotAxes(1) myData.plotAxes(2)], 'x');
 
 % subplot(3,1,3);
 axes(myData.plotAxes(3));

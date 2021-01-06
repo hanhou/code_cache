@@ -17,14 +17,14 @@ set(gca, 'YDir', 'normal');
 hold on;
 
 if strcmp(psthType, 'norm')
-    plot(zeros(1, nD), depthBins(1:end-1), 'k--', 'LineWidth', 2.0)
+%     plot(zeros(1, nD), depthBins(1:end-1), 'k--', 'LineWidth', 2.0)
     colormap(ax, colormap_BlueWhiteRed)
     caxis([-10 10]);
 else
-    plot(zeros(1, nD), depthBins(1:end-1), 'w--', 'LineWidth', 2.0)
+%     plot(zeros(1, nD), depthBins(1:end-1), 'w--', 'LineWidth', 2.0)
 end
     
-xlabel(['time from ' eventName ' (sec)']);
+xlabel(['time from ' eventName ' (ms)']);
 xlim([min(timeBins) max(timeBins)]);
 ylabel('depth on electrode array (µm)')
 box off
