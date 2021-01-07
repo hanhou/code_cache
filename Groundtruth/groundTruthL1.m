@@ -44,6 +44,16 @@ goCueFile = dir(fullfile(ksDir, '..\..\', '*XD_2_1_1200.adj.txt'));
 
 trialStart = dlmread(fullfile(trialStartFile.folder, trialStartFile.name));
 goCue = dlmread(fullfile(goCueFile.folder, goCueFile.name));
+trialN = length(goCue); % trial number of the spike
+
+% Compensate drift of goCue VS photostim (due to catGT error) !!!
+if exist(fullfile(ksDir, 'catGTLastError.txt'))
+    catGTLastError = dlmread(fullfile(ksDir, 'catGTLastError.txt'));
+    fprintf('------------- catGT ERROR corrected: %g sec/%g trials ---------\n', catGTLastError, trialN)
+else
+    catGTLastError = 0; 
+end
+goCue = goCue + (1:trialN)' * catGTLastError/trialN;
 
 % Use loadKSdir
 sp = loadKSdir(ksDir);
@@ -77,119 +87,46 @@ spikeDepths = spikeDepths(bigUnits);
 
 spktime = sp.st;
 uniqueMUPosition = unique(spikeDepths);
-trialN = ones(size(spktime))*length(goCue); % trial number of the spike
 spktime2 = spktime;
 
-%% realign the spiketimes for each trial
-viT_offset_file2=[trialStart' trialStart(end)+20]-0.5;
-for i = length(viT_offset_file2)-1:-1:1
-    trialN(spktime>=viT_offset_file2(i) & spktime<viT_offset_file2(i+1))=i;
-    spktime2(spktime>=viT_offset_file2(i) & spktime<viT_offset_file2(i+1))=(spktime(spktime>=viT_offset_file2(i) & spktime<viT_offset_file2(i+1))-goCue(i));
-end
+lfpSurfaceCh = 384;  % Dummy
 
-% re-zero
-spktime2=spktime2-1.2; % for the pulse stimulation (only sample cue)
+%% --- Draw LFP, get surface channel from LFP ---
+lfpFile = dir(fullfile(ksDir, '..\', '*.lf.bin'));
+lfpFileFullname = fullfile(lfpFile.folder, lfpFile.name);
 
-% get psth to photostim, Plot latency to photo-stim
-% close all
-trialMax=max(trialN);
+lfpFs = 2500;  % neuropixels phase3a
+nChansInFile = 385;  % neuropixels phase3a, from spikeGLX
 
-binwidth=0.002; % s
-bins=-3:binwidth:3; % bins
+% -- Compute LFP power and find surface channel --
+[lfpByChannel, allPowerEst, F, allPowerVar, lfpCorr, lfpSurfaceCh] = ...
+    lfpBandPower(lfpFileFullname, lfpFs, nChansInFile, [], [0, 20]);
 
-ignoreFR=zeros(length(bins)-1,length(uniqueMUPosition)); % for CD
-stimFR=zeros(length(bins)-1,length(uniqueMUPosition)); % for CD
-timePeriod=[-1.2 -1.19]; % Before trial start
-timePeriodS=[0 .1]; % get a function of time period and depth
-diffFR=zeros(1,length(uniqueMUPosition)); % for CD
+% chanMap = readNPY(fullfile(ksDir, 'channel_map.npy'));
+% nC = length(chanMap);
+nC = nChansInFile - 1;
+allPowerEst = allPowerEst';
+% allPowerEst = allPowerEst(:,chanMap+1)'; % now nChans x nFreq
 
-for i=1:length(uniqueMUPosition)
-    nSpk= histcounts(spktime2(spikeDepths==uniqueMUPosition(i)),bins)'/length(trialStart)/binwidth;    
-    nSpkS=histcounts(spktime2(spikeDepths==uniqueMUPosition(i)),bins)'/length(trialStart)/binwidth;
-    
-    ignoreFR(:,i)=nSpk; % for CD
-    stimFR(:,i)=nSpkS; % for CD
-    
-    sSpk=histcounts(spktime2(spikeDepths==uniqueMUPosition(i)),timePeriod)'/length(trialStart)/binwidth;    
-    sSpkS=histcounts(spktime2(spikeDepths==uniqueMUPosition(i)),timePeriodS)'/length(trialStart)/binwidth;
-    
-    diffFR(i)=sSpkS-sSpk;
-end
+% plot LFP power and LFP surface
+dispRange = [0 100]; % Hz
+marginalChans = [10:50:nC];
+freqBands = {[1.5 4], [4 10], [10 30], [30 80], [80 200]};
 
-%% plot
-%
-% close all
-xmax=100;
-xmin=-30;
-% % plot(diffFR,(length(diffFR):-1:1)*3.84/length(diffFR))
-% figure; 
-% plot(diffFR,double(uniqueMUPosition))
-% box off
-% title('0-20ms')
-% ylabel('Probe length (mm)')
-% xlabel('Difference in MUA (spike/s)')
-% set(gca,'TickDir','out')
-% ax=gca;
-% % ax.YDir = 'reverse';
-% %ylim([0 3.84]);
+plotLFPpower(F, allPowerEst, dispRange, marginalChans, freqBands, lfpSurfaceCh);
+set(gcf, 'name', ksDir)
+set(gcf,'uni','norm','pos',[0.338       0.145       0.443       0.693]);
+SetFigure(20);
 
-%%
-figure('name', ksDir)
-% timePeriod=[-1.23 -1.21];
-timePeriod=[-0.04 -0.02]; % pulses
-startI=find(round(bins,2)==round(timePeriod(1),2));
-endI=find(round(bins,2)==round(timePeriod(2),2));
-% diffFR2=mean(stimFR(startI:endI,:),1)-mean(ignoreFR(startI:endI,:),1);
-diffFR2=mean(stimFR(startI:endI,:),1)-mean(stimFR(1:500,:),1); % pulses
-subplot(131)
-plot(diffFR2,double(uniqueMUPosition))
-box off
-title('-20-0 ms')
-% ylabel('Depth in the brain (mm)')
-ylabel('Length on the probe (mm)')
-ax=gca;
-% ax.YDir = 'reverse';
-%ylim([0 3.84])
-xlim([xmin xmax])
+% plot LFP correlation
+figure(); imagesc([0 nC] * 10, [0 nC] * 10, lfpCorr); hold on;
+plot(xlim(), [lfpSurfaceCh lfpSurfaceCh]*10, 'r--', 'linew', 2);
+plot([lfpSurfaceCh lfpSurfaceCh]*10, ylim(), 'r--', 'linew', 2);
+colorbar
+set(gca,'YDir','normal') 
+SetFigure(20);
+title(sprintf('LFP surface = %g um', lfpSurfaceCh*10));
 
-% timePeriod=[-1.21 -1.19];
-stims=zeros(6,length(uniqueMUPosition));
-for i = 1:6
-    timePeriod=[0.006 0.026]+(i-1)*0.2; % pulses
-    startI=find(round(bins,2)==round(timePeriod(1),2));
-    endI=find(round(bins,2)==round(timePeriod(2),2));
-    stims(i,:)=mean(stimFR(startI:endI,:),1)-mean(stimFR(1:500,:),1);
-end
-
-% diffFR2=mean(stimFR(startI:endI,:),1)-mean(ignoreFR(startI:endI,:),1);
-diffFR20=mean(stims);
-subplot(132)
-xE=double(uniqueMUPosition);
-plot(diffFR20,xE)
-box off
-title('0-20 ms')
-set(gca,'TickDir','out')
-ax=gca;
-% ax.YDir = 'reverse';
-%ylim([0 3.84])
-xlim([xmin xmax])
-xlabel('Difference in MUA (spike/s)')
-
-% timePeriod=[-1.19 -1.17];
-timePeriod=[.02 .04]; % pulses
-startI=find(round(bins,2)==round(timePeriod(1),2));
-endI=find(round(bins,2)==round(timePeriod(2),2));
-% diffFR2=mean(stimFR(startI:endI,:),1)-mean(ignoreFR(startI:endI,:),1);
-diffFR2=mean(stimFR(startI:endI,:),1)-mean(stimFR(1:500,:),1);
-subplot(133)
-plot(diffFR2,double(uniqueMUPosition))
-box off
-title('20-40 ms')
-set(gca,'TickDir','out')
-ax=gca;
-% ax.YDir = 'reverse';
-xlim([xmin xmax])
-%ylim([0 3.84])
 
 %% --- psthViewer --
 % psthViewer(spikeTimes, clu, eventTimes, window, trGroups)
@@ -201,22 +138,29 @@ trialGroups = ones(size(sp.events));
 
 window = [0, 3];
 otherTimeMarkers = [1.2:0.2:2.2 (1.2:0.2:2.2)+0.002];
-psthViewer(sp.st, sp.clu, sp.events, window, trialGroups, otherTimeMarkers)
+psthViewer(sp.st, sp.clu, goCue, window, trialGroups, templateDepths, waveforms, otherTimeMarkers, lfpSurfaceCh)
+set(gcf, 'name', ksDir)
+
 
 %% --- PSTHbyDepth ---
 psthType = ''; % show the normalized version
 eventName = 'stimulus onset'; % for figure labeling
 
 [timeBins, depthBins, allP, normVals] = psthByDepth(sp.st, spikeDepths, ...
-    depthBinSize, timeBinSize, sp.events, window, bslWin);
+    depthBinSize, timeBinSize, goCue, window, bslWin);
 timeBins = (timeBins - 1.2) * 1000;
 
 figure('name', ksDir)
 set(gcf,'uni','norm','pos',[0.142       0.073        0.78       0.825]);
 ax1 = subplot(1,2,1); 
-plotPSTHbyDepth(timeBins, depthBins, allP, eventName, 'norm');   % Normalized
-ylim([0 3500])
+plotPSTHbyDepth(timeBins, depthBins, allP, eventName, 'norm', [], lfpSurfaceCh, [1, 384]);  % Normalized
+
 hold on; 
+plot(xlim(), [0 0], 'b--', 'linew', 2);
+text(min(xlim())+100, -100, sprintf('LFP surface: ch #%g', lfpSurfaceCh), 'color', 'b');
+plot(xlim(), lfpSurfaceCh*10 - [3840 3840], 'k-');
+plot(xlim(), [lfpSurfaceCh*10 lfpSurfaceCh*10], 'k-');
+
 otherTimeMarkers = [0:200:1000 (0:200:1000)+2];
 for i = 1:length(otherTimeMarkers)
     x = otherTimeMarkers(i);
@@ -224,21 +168,30 @@ for i = 1:length(otherTimeMarkers)
 end
 
 ax2 = subplot(1,2,2); 
-plotPSTHbyDepth(timeBins, depthBins, allP .* normVals(:,2), eventName, '');   % Only mean is removed
-ylim([0 3500])
+plotPSTHbyDepth(timeBins, depthBins, allP .* normVals(:,2), eventName, '', [], lfpSurfaceCh, [1, 384]);   % Only mean is removed
 hold on; 
-for i = 1:length(otherTimeMarkers)
-    x = otherTimeMarkers(i);
-    plot(x*[1 1], ylim(), 'w--');
-end
 colormap(ax2, jet)
 linkaxes([ax1, ax2], 'xy');
+plot(xlim(), [0 0], 'b--', 'linew', 2);
+text(min(xlim())+100, -100, sprintf('LFP surface: ch #%g', lfpSurfaceCh), 'color', 'b');
+plot(xlim(), lfpSurfaceCh*10 - [3840 3840], 'k-');
+plot(xlim(), [lfpSurfaceCh*10 lfpSurfaceCh*10], 'k-');
 
+for i = 1:length(otherTimeMarkers)
+    x = otherTimeMarkers(i);
+    plot(x*[1 1], ylim(), 'k--');
+end
+SetFigure(20);
+drawnow;
 
 %% --- Driftmap ---
 [spikeTimes, spikeAmps, spikeDepths_driftmap, spikeSites] = ksDriftmap(ksDir);
 figure('name', ksDir)
 plotDriftmap(spikeTimes, spikeAmps, spikeDepths_driftmap);
+plot(xlim(), [lfpSurfaceCh lfpSurfaceCh]*10, 'b--', 'linew', 2);
+text(min(xlim())+100, lfpSurfaceCh*10+100, sprintf('LFP surface: ch #%g', lfpSurfaceCh), 'color', 'b');
+
+% makepretty;
 
 %% --- Spike Amps ---
 depthBins = 0:40:3840;
@@ -246,36 +199,15 @@ ampBins = 0:30:min(max(spikeAmps),800);
 recordingDur = sp.st(end);
 
 [pdfs, cdfs] = computeWFampsOverDepth(spikeAmps, spikeDepths_driftmap, ampBins, depthBins, recordingDur);
-plotWFampCDFs(pdfs, cdfs, ampBins, depthBins);
+plotWFampCDFs(pdfs, cdfs, ampBins, depthBins, lfpSurfaceCh);
 
-%% --- LFP ---
-%{
-lfDir = [cat_folder run_name '_g0_' probe '\'];
-lfpD = dir(fullfile(lfDir, '*.lf.bin')); % LFP file from spikeGLX specifically
-lfpFilename = fullfile(lfDir, lfpD(1).name);
-
-lfpFs = 2500;  % neuropixels phase3a
-nChansInFile = 385;  % neuropixels phase3a, from spikeGLX
-
-[lfpByChannel, allPowerEst, F, allPowerVar] = ...
-    lfpBandPower(lfpFilename, lfpFs, nChansInFile, []);
-
-chanMap = readNPY(fullfile(ksDir, 'channel_map.npy'));
-nC = length(chanMap);
-
-allPowerEst = allPowerEst(:,chanMap+1)'; % now nChans x nFreq
-
-% plot LFP power
-dispRange = [0 100]; % Hz
-marginalChans = [10:50:nC];
-freqBands = {[1.5 4], [4 10], [10 30], [30 80], [80 200]};
-
-plotLFPpower(F, allPowerEst, dispRange, marginalChans, freqBands);
-
-%}
 %% --- Retrieve any unit from the plot ---
-yPos = 2580;
-[~,id] = min(abs(uniqueMUPosition - yPos));
-cid = mode(sp.spikeTemplates(spikeDepths == uniqueMUPosition(id)))
+yPos = 1725;
+ind = abs(uniqueMUPosition - yPos) < depthBinSize;
+closest_pos = uniqueMUPosition(ind);
+for i=1:length(closest_pos)
+    fprintf('Closest #%g: cid = %g, depth = %g\n', i, mode(sp.clu(spikeDepths == closest_pos(i))), closest_pos(i));
+end
+fprintf('\n')
 
 
