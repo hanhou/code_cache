@@ -88,7 +88,7 @@ cid = myData.clusterIDs(myData.params.clusterIndex);
 st = myData.spikeTimes(myData.clu==cid);
 
 % get depth
-thisChan = round(myData.templateDepths(cid)/10);
+thisChan = round(myData.templateDepths(cid+1)/10);
 thisDepth = (myData.lfpSurfaceCh - thisChan) * 10; % in um
 
 % compute everything
@@ -217,12 +217,12 @@ box off;
 % drawnow;
 
 % -- Plot waveform --
-waveform = myData.waveforms(cid,:);
+waveform = myData.waveforms(cid+1,:);
 axes(myData.plotAxes(4));
 plot((1:length(waveform))*1000/30000, waveform, 'k', 'linew', 3);
 xlabel('ms')
 h = gca; h.YAxis.Visible= 'off';
-
+drawnow
 end
 
 function psthViewerCallback(f, keydata)
