@@ -15,7 +15,7 @@ end
 % imagesc(timeBins, depthBins(1:end-1), allP);
 actualDepth = lfpSurfaceCh * 10 - depthBins(1:end-1); 
 imagesc(timeBins, actualDepth, allP);
-set(gca, 'YDir', 'normal');
+set(gca, 'YDir','reverse')
 hold on;
 
 if strcmp(psthType, 'norm')
@@ -47,4 +47,4 @@ for i = 1:length(chNumToShow)
 end
 
 % makepretty;
-set(gca, 'YDir','reverse')
+

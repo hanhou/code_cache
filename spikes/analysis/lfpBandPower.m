@@ -1,6 +1,6 @@
 
 
-function [lfpByChannel, allPowerEst, F, allPowerVar, lfpCorr, lfpSurfaceCh] = lfpBandPower(lfpFilename, lfpFs, nChansInFile, freqBands, freqBandForSurface)
+function [lfpByChannel, allPowerEst, F, allPowerVar, lfpCorr, lfpSurfaceCh] = lfpBandPower(lfpFilename, lfpFs, nChansInFile, freqBands, freqBandForSurface, antiStaggering)
 % function [lfpByChannel, allPowerEst, F] = lfpBandPower(lfpFilename, lfpFs, nChansInFile, freqBand)
 % Computes the power in particular bands, and across all frequencies, across the recording
 % samples 10 segments of 1 sec each to compute these things. 
@@ -24,23 +24,32 @@ nClipSamps = round(lfpFs*clipDur);
 
 mmf = memmapfile(lfpFilename, 'Format', {'int16', [nChansInFile nSamps], 'x'});
 
-lfpRaw = mmf.Data.x(1:end-1, :);  % Remove sync channel
+% lfpRaw = mmf.Data.x(1:end-1, :);  % Remove sync channel
 nChansInFile = nChansInFile - 1;
-lfpRaw(192,:) = lfpRaw(191, :); % Duplicate reference channel
+if antiStaggering
+    nDepth = nChansInFile/2; % Anti-stagerring in LFP due to the layout of NPX probes
+else
+    nDepth = nChansInFile;
+end
 
-allPowerEstByBand = zeros(nClips, nChansInFile, nF);
-lfpCovs = zeros(nChansInFile, nChansInFile, nClips);
-powerLowBand = zeros(nChansInFile, nClips);
+allPowerEstByBand = zeros(nClips, nDepth, nF);
+lfpCovs = zeros(nDepth, nDepth, nClips);
+powerLowBand = zeros(nDepth, nClips);
 
 for n = 1:nClips
 %     fprintf(1, 'clip%d: ', n);
     % pull out the data
-    thisDat = double(lfpRaw(:, (1:nClipSamps)+sampStarts(n)));
-    
+    thisDat = double(mmf.Data.x(1:end-1, (1:nClipSamps)+sampStarts(n)));  % Remove sync channel
+    thisDat(192,:) = thisDat(191, :); % Duplicate reference channel
+
     % median subtract? 
     thisDat = bsxfun(@minus, thisDat, median(thisDat,2));  % Self-median
 %     thisDat = bsxfun(@minus, thisDat, mean(thisDat,2));
     thisDat = thisDat - mean(thisDat(380:384, :),1);   % Median of air channels (remove 60 Hz)
+    
+    if antiStaggering
+        thisDat = squeeze(mean(reshape(thisDat',size(thisDat,2),2,[]),2))';  % Spatial averaging across the same depths (two sites in a row)
+    end
         
     [Pxx, F] = myTimePowerSpectrumMat(thisDat', lfpFs);
     
@@ -84,6 +93,10 @@ surfaceGuessByPower = find(powerLowBand > median(powerLowBand), 1, 'last'); % La
 corrToAver = surfaceGuessByPower-corrAverRange: surfaceGuessByPower;
 lfpCorrForSurface = mean(lfpCorr(corrToAver, :));  % Average the correlation coeff
 [~, lfpSurfaceCh] = min(diff(smooth(lfpCorrForSurface)));  % Fastest decay of the corr coeff
+
+if antiStaggering
+    lfpSurfaceCh = lfpSurfaceCh * 2;
+end
 
 
 

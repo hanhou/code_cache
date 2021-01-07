@@ -54,6 +54,7 @@ else
     catGTLastError = 0; 
 end
 goCue = goCue + (1:trialN)' * catGTLastError/trialN;
+photoStimTime = goCue + 1.2;
 
 % Use loadKSdir
 sp = loadKSdir(ksDir);
@@ -99,34 +100,76 @@ lfpFs = 2500;  % neuropixels phase3a
 nChansInFile = 385;  % neuropixels phase3a, from spikeGLX
 
 % -- Compute LFP power and find surface channel --
+antiStaggering = true;
 [lfpByChannel, allPowerEst, F, allPowerVar, lfpCorr, lfpSurfaceCh] = ...
-    lfpBandPower(lfpFileFullname, lfpFs, nChansInFile, [], [0, 20]);
+    lfpBandPower(lfpFileFullname, lfpFs, nChansInFile, [], [0, 20], antiStaggering);
 
 % chanMap = readNPY(fullfile(ksDir, 'channel_map.npy'));
 % nC = length(chanMap);
 nC = nChansInFile - 1;
+depth = (0:nC-1)*10;
+if antiStaggering
+    nC = nC/2;
+end
 allPowerEst = allPowerEst';
-% allPowerEst = allPowerEst(:,chanMap+1)'; % now nChans x nFreq
 
 % plot LFP power and LFP surface
 dispRange = [0 100]; % Hz
-marginalChans = [10:50:nC];
+marginalChans = round(linspace(10, nC, 6));
 freqBands = {[1.5 4], [4 10], [10 30], [30 80], [80 200]};
 
-plotLFPpower(F, allPowerEst, dispRange, marginalChans, freqBands, lfpSurfaceCh);
+plotLFPpower(F, allPowerEst, dispRange, marginalChans, freqBands, lfpSurfaceCh, antiStaggering);
 set(gcf, 'name', ksDir)
 set(gcf,'uni','norm','pos',[0.338       0.145       0.443       0.693]);
 SetFigure(20);
 
 % plot LFP correlation
-figure(); imagesc([0 nC] * 10, [0 nC] * 10, lfpCorr); hold on;
+figure('Name', 'LFP correlation'); imagesc(depth, depth, lfpCorr); hold on;
 plot(xlim(), [lfpSurfaceCh lfpSurfaceCh]*10, 'r--', 'linew', 2);
 plot([lfpSurfaceCh lfpSurfaceCh]*10, ylim(), 'r--', 'linew', 2);
-colorbar
+colorbar; colormap gray;
 set(gca,'YDir','normal') 
 SetFigure(20);
 title(sprintf('LFP surface = %g um', lfpSurfaceCh*10));
 
+%% --- pstLFP ---
+[event_trig_lfp_all, lfp_ts] = pstLFPByDepth(lfpFileFullname, lfpFs, nChansInFile, photoStimTime, lfpSurfaceCh, antiStaggering);
+event_trig_lfp_aver = median(event_trig_lfp_all, 3);
+
+% Plotting
+figure('name', ksDir)
+set(gcf,'uni','norm','pos',[0.142       0.073        0.78       0.825]);
+ax1 = subplot(1,2,1); 
+plotLFPbyDepth(lfp_ts * 1000, event_trig_lfp_aver, ax1, lfpSurfaceCh, [1, 384], antiStaggering)
+
+hold on; 
+plot(xlim(), [0 0], 'b--', 'linew', 2);
+text(min(xlim())+100, -100, sprintf('LFP surface: ch #%g', lfpSurfaceCh), 'color', 'b');
+plot(xlim(), lfpSurfaceCh*10 - [3840 3840], 'k-');
+plot(xlim(), [lfpSurfaceCh*10 lfpSurfaceCh*10], 'k-');
+
+otherTimeMarkers = [0:200:1000 (0:200:1000)+2];
+for i = 1:length(otherTimeMarkers)
+    x = otherTimeMarkers(i);
+    plot(x*[1 1], ylim(), 'k--');
+end
+
+ax2 = subplot(1,2,2); 
+plotPSTHbyDepth(timeBins, depthBins, allP .* normVals(:,2), eventName, '', [], lfpSurfaceCh, [1, 384]);   % Only mean is removed
+hold on; 
+colormap(ax2, jet)
+linkaxes([ax1, ax2], 'xy');
+plot(xlim(), [0 0], 'b--', 'linew', 2);
+text(min(xlim())+100, -100, sprintf('LFP surface: ch #%g', lfpSurfaceCh), 'color', 'b');
+plot(xlim(), lfpSurfaceCh*10 - [3840 3840], 'k-');
+plot(xlim(), [lfpSurfaceCh*10 lfpSurfaceCh*10], 'k-');
+
+for i = 1:length(otherTimeMarkers)
+    x = otherTimeMarkers(i);
+    plot(x*[1 1], ylim(), 'k--');
+end
+SetFigure(20);
+drawnow;
 
 %% --- psthViewer --
 % psthViewer(spikeTimes, clu, eventTimes, window, trGroups)
