@@ -13,7 +13,8 @@ nF = length(freqBands);
 nClips = 10;
 clipDur = 1; % seconds
 startTime = 3; % skip first seconds
-surfacePowerThreshold = 10; % Surface channel = Drop -10 dB power from median
+% surfacePowerCutoff = 3; % Surface channel = Drop -3 dB power from median (50% median power)
+corrAverRange = 10;
 
 % load nClips one-sec samples
 d = dir(lfpFilename); 
@@ -30,6 +31,7 @@ lfpRaw(192,:) = lfpRaw(191, :); % Duplicate reference channel
 allPowerEstByBand = zeros(nClips, nChansInFile, nF);
 surfaceChannels = nan(nClips, 1);
 lfpCovs = zeros(nChansInFile, nChansInFile, nClips);
+powerLowBand = zeros(nChansInFile, nClips);
 
 figure(); hold on;
 
@@ -55,16 +57,16 @@ for n = 1:nClips
         allPowerEstByBand(n,:, f) = mean(Pxx(inclF,:));
     end
     
-    % -- Find LFP surface --
+    % Cache power ([0,20]) across channels
     inclF = F>freqBandForSurface(1) & F<=freqBandForSurface(2);
-    powerForSurface = 10*log10(mean(Pxx(inclF,:)));
-    brainPowerLevel = median(powerForSurface); % Median of all channels (assuming >50% channels are in the brain)
-    surfaceChannels(n) = find(powerForSurface < brainPowerLevel - surfacePowerThreshold, 1);
-    fprintf('surface ch = %g\n', surfaceChannels(n));
-    plot(powerForSurface, 'k');
-    plot([surfaceChannels(n) surfaceChannels(n)], ylim(), 'r--')
+    powerLowBand(:, n) = 10*log10(mean(Pxx(inclF,:)));
+%     brainPowerLevel = median(powerForSurface); % Median of all channels (assuming >50% channels are in the brain)
+%     surfaceChannels(n) = find(powerForSurface < brainPowerLevel - surfacePowerThreshold, 1);
+%     fprintf('surface ch = %g\n', surfaceChannels(n));
+%     plot(powerForSurface, 'k');
+%     plot([surfaceChannels(n) surfaceChannels(n)], ylim(), 'r--')
     
-    % LFP correlation
+    % Cache LFP correlation
     lfpCovs(:, :, n) = corrcoef(thisDat');
     
 end
@@ -77,11 +79,14 @@ end
 allPowerVar = squeeze(var(allPowerEst,1));
 allPowerEst = squeeze(mean(allPowerEst, 1));
 
-% LFP correlation
 lfpCorr = mean(lfpCovs, 3);
 
-lfpSurfaceCh = median(surfaceChannels);
-
+% -- Use power & correlation to find the surface channel --
+powerLowBand = median(powerLowBand, 2);
+surfaceGuessByPower = find(powerLowBand > median(powerLowBand), 1, 'last'); % Last channel with power > median (in the brain for sure)
+corrToAver = surfaceGuessByPower-corrAverRange: surfaceGuessByPower;
+lfpCorrForSurface = mean(lfpCorr(corrToAver, :));  % Average the correlation coeff
+[~, lfpSurfaceCh] = min(diff(smooth(lfpCorrForSurface)));  % Fastest decay of the corr coeff
 
 
 
