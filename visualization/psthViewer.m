@@ -1,6 +1,6 @@
 
 
-function psthViewer(spikeTimes, clu, eventTimes, window, trGroups, otherTimeMarkers)
+function psthViewer(spikeTimes, clu, eventTimes, window, trGroups, templateDepths, waveforms, otherTimeMarkers, lfpSurfaceCh)
 % function psthViewer(spikeTimes, clu, eventTimes, window, trGroups)
 %
 % Controls:
@@ -61,6 +61,9 @@ myData.clusterIDs = unique(clu);
 myData.trGroupLabels = unique(myData.trGroups);
 myData.nGroups = length(myData.trGroupLabels);
 myData.otherTimeMarkers = otherTimeMarkers;
+myData.templateDepths = templateDepths;
+myData.waveforms = waveforms;
+myData.lfpSurfaceCh = lfpSurfaceCh;
 myData.plotAxes = [];
 
 params.colors = copper(myData.nGroups); params.colors = params.colors(:, [3 2 1]);
@@ -71,6 +74,7 @@ f = figure;
 
 set(f, 'UserData', myData);
 set(f, 'KeyPressFcn', @(f,k)psthViewerCallback(f, k));
+set(gcf,'uni','norm','pos',[0.196        0.16       0.449       0.654]);
 
 psthViewerPlot(f)
 end
@@ -78,9 +82,14 @@ end
 function psthViewerPlot(f)
 % fprintf(1,'plot with fig %d\n', get(f,'Number'));
 myData = get(f,'UserData');
+cid = myData.clusterIDs(myData.params.clusterIndex);
 
 % pick the right spikes
-st = myData.spikeTimes(myData.clu==myData.clusterIDs(myData.params.clusterIndex));
+st = myData.spikeTimes(myData.clu==cid);
+
+% get depth
+thisChan = round(myData.templateDepths(cid)/10);
+thisDepth = (myData.lfpSurfaceCh - thisChan) * 10; % in um
 
 % compute everything
 %[psth, bins, rasterX, rasterY, spikeCounts] = psthRasterAndCounts(st, myData.eventTimes, myData.params.window, 0.001);
@@ -143,10 +152,12 @@ end
 % Make plots
 
 if isempty(myData.plotAxes)
-    for p = 1:3
+    for p = 1:2
         subplot(3,1,p);
         myData.plotAxes(p) = gca;
     end
+    myData.plotAxes(3) = subplot(3,3,[7 8]);
+    myData.plotAxes(4) = subplot(3,3,9);
     set(f, 'UserData', myData);
 end
 
@@ -163,7 +174,7 @@ else
     plot(bins, psthSm);
 end
 xlim(myData.params.window);
-title(['cluster ' num2str(myData.clusterIDs(myData.params.clusterIndex))]);
+title(sprintf('cluster %g, chan %g, depth %g um', cid, thisChan, thisDepth));
 xlabel('time (sec)');
 ylabel('firing rate (Hz)');
 yl = ylim();
@@ -204,6 +215,13 @@ makepretty;
 box off;
 
 % drawnow;
+
+% -- Plot waveform --
+waveform = myData.waveforms(cid,:);
+axes(myData.plotAxes(4));
+plot((1:length(waveform))*1000/30000, waveform, 'k', 'linew', 3);
+xlabel('ms')
+h = gca; h.YAxis.Visible= 'off';
 
 end
 

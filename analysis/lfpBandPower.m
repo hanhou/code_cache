@@ -29,14 +29,11 @@ nChansInFile = nChansInFile - 1;
 lfpRaw(192,:) = lfpRaw(191, :); % Duplicate reference channel
 
 allPowerEstByBand = zeros(nClips, nChansInFile, nF);
-surfaceChannels = nan(nClips, 1);
 lfpCovs = zeros(nChansInFile, nChansInFile, nClips);
 powerLowBand = zeros(nChansInFile, nClips);
 
-figure(); hold on;
-
 for n = 1:nClips
-    fprintf(1, 'clip%d: ', n);
+%     fprintf(1, 'clip%d: ', n);
     % pull out the data
     thisDat = double(lfpRaw(:, (1:nClipSamps)+sampStarts(n)));
     
