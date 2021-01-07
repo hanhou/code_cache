@@ -4,6 +4,7 @@ clear
 % MU thresholding
 MUThr = 0;
 gainFactor = 0.6/512/500*1e6;
+antiLFPStaggering = true;
 
 % Depth PSTH
 depthBinSize = 20; % in units of the channel coordinates, in this case µm
@@ -100,15 +101,15 @@ lfpFs = 2500;  % neuropixels phase3a
 nChansInFile = 385;  % neuropixels phase3a, from spikeGLX
 
 % -- Compute LFP power and find surface channel --
-antiStaggering = true;
 [lfpByChannel, allPowerEst, F, allPowerVar, lfpCorr, lfpSurfaceCh] = ...
-    lfpBandPower(lfpFileFullname, lfpFs, nChansInFile, [], [0, 20], antiStaggering);
+    lfpBandPower(lfpFileFullname, lfpFs, nChansInFile, [], [0, 20], antiLFPStaggering);
 
 % chanMap = readNPY(fullfile(ksDir, 'channel_map.npy'));
 % nC = length(chanMap);
 nC = nChansInFile - 1;
-depth = (0:nC-1)*10;
-if antiStaggering
+depthOnProbe = (0:nC-1)*10;
+
+if antiLFPStaggering
     nC = nC/2;
 end
 allPowerEst = allPowerEst';
@@ -118,13 +119,13 @@ dispRange = [0 100]; % Hz
 marginalChans = round(linspace(10, nC, 6));
 freqBands = {[1.5 4], [4 10], [10 30], [30 80], [80 200]};
 
-plotLFPpower(F, allPowerEst, dispRange, marginalChans, freqBands, lfpSurfaceCh, antiStaggering);
+plotLFPpower(F, allPowerEst, dispRange, marginalChans, freqBands, lfpSurfaceCh, antiLFPStaggering);
 set(gcf, 'name', ksDir)
 set(gcf,'uni','norm','pos',[0.338       0.145       0.443       0.693]);
 SetFigure(20);
 
 % plot LFP correlation
-figure('Name', 'LFP correlation'); imagesc(depth, depth, lfpCorr); hold on;
+figure('Name', 'LFP correlation'); imagesc(depthOnProbe, depthOnProbe, lfpCorr); hold on;
 plot(xlim(), [lfpSurfaceCh lfpSurfaceCh]*10, 'r--', 'linew', 2);
 plot([lfpSurfaceCh lfpSurfaceCh]*10, ylim(), 'r--', 'linew', 2);
 colorbar; colormap gray;
@@ -132,16 +133,19 @@ set(gca,'YDir','normal')
 SetFigure(20);
 title(sprintf('LFP surface = %g um', lfpSurfaceCh*10));
 
-%% --- pstLFP ---
-[event_trig_lfp_all, lfp_ts] = pstLFPByDepth(lfpFileFullname, lfpFs, nChansInFile, photoStimTime, lfpSurfaceCh, antiStaggering);
-event_trig_lfp_aver = median(event_trig_lfp_all, 3);
+%% --- stim-triggered LFP ---
+photoStimTime = photoStimTime + 0.0014; % LFP offset
 
-% Plotting
+fprintf('Stim-triggered LFP.....');
+[event_trig_lfp_all, event_trig_lfp_aver, event_trig_CSD, lfp_ts] = pstLFPByDepth(lfpFileFullname, lfpFs, nChansInFile, photoStimTime, lfpSurfaceCh, antiLFPStaggering);
+fprintf('Done!\n');
+
+%% -- Plotting
 figure('name', ksDir)
-set(gcf,'uni','norm','pos',[0.142       0.073        0.78       0.825]);
-ax1 = subplot(1,2,1); 
-plotLFPbyDepth(lfp_ts * 1000, event_trig_lfp_aver, ax1, lfpSurfaceCh, [1, 384], antiStaggering)
+set(gcf,'uni','norm','pos',[0.009        0.08        0.64       0.826]);
 
+ax1_lfp = subplot(1,2,1); 
+plotLFPbyDepth(lfp_ts * 1000, event_trig_lfp_aver, ax1_lfp, lfpSurfaceCh, [1, 384], antiLFPStaggering)
 hold on; 
 plot(xlim(), [0 0], 'b--', 'linew', 2);
 text(min(xlim())+100, -100, sprintf('LFP surface: ch #%g', lfpSurfaceCh), 'color', 'b');
@@ -153,12 +157,13 @@ for i = 1:length(otherTimeMarkers)
     x = otherTimeMarkers(i);
     plot(x*[1 1], ylim(), 'k--');
 end
+title(sprintf('Evoked LFP, %g trials', trialN));
 
-ax2 = subplot(1,2,2); 
-plotPSTHbyDepth(timeBins, depthBins, allP .* normVals(:,2), eventName, '', [], lfpSurfaceCh, [1, 384]);   % Only mean is removed
+ax2_lfp = subplot(1,2,2); 
+plotLFPbyDepth(lfp_ts * 1000, event_trig_CSD, ax1_lfp, lfpSurfaceCh, [1, 384], antiLFPStaggering)
 hold on; 
-colormap(ax2, jet)
-linkaxes([ax1, ax2], 'xy');
+%colormap(ax2_lfp, jet)
+linkaxes([ax1_lfp, ax2_lfp], 'xy');
 plot(xlim(), [0 0], 'b--', 'linew', 2);
 text(min(xlim())+100, -100, sprintf('LFP surface: ch #%g', lfpSurfaceCh), 'color', 'b');
 plot(xlim(), lfpSurfaceCh*10 - [3840 3840], 'k-');
@@ -168,8 +173,41 @@ for i = 1:length(otherTimeMarkers)
     x = otherTimeMarkers(i);
     plot(x*[1 1], ylim(), 'k--');
 end
+title(sprintf('Evoked CSD, %g trials', trialN));
+% colormap(gca, flipud(jet)); % blue = source; red = sink
+title('CSD, \muA/mm^3 (\color{blue}sink, \color{red}source\color{black})');
+
 SetFigure(20);
 drawnow;
+
+% -- Show some averaged LFP
+figure('name', ['Stim-triggered LFP', ksDir]);
+set(gcf,'uni','norm','pos',[0.651       0.081       0.339       0.825]);
+hold on;
+lfpActualDepthToShow = -300:300:3500;
+lfpActualDepth = (lfpSurfaceCh - (0:nC-1)*(1+antiLFPStaggering))*10; 
+gain = 5;
+
+for dd = 1:length(lfpActualDepthToShow)
+    % subplot(length(lfpActualDepthToShow), 1, dd);
+    [~, thisIdx] = min(abs(lfpActualDepthToShow(dd) - lfpActualDepth));
+    offset = lfpActualDepth(thisIdx);
+    thisLFP = squeeze(event_trig_lfp_all(thisIdx,:,:))';
+    thisLFP = thisLFP / range(thisLFP(:)) * mean(diff(lfpActualDepthToShow) * gain);
+    shadedErrorBar(lfp_ts * 1000, -thisLFP + offset, {@median, @(x) 2*std(x,[],1)/sqrt(size(x,1))});
+end
+
+for i = 1:length(otherTimeMarkers)
+    x = otherTimeMarkers(i);
+    plot(x*[1 1], ylim(), 'k--');
+end
+
+% linkaxes(findall(gcf,'type','axes'),'y');
+linkaxes([gca ax1_lfp],'xy');
+set(gca, 'YDir','reverse')
+title(sprintf('%g trials', trialN));
+xlim([-200 1400])
+SetFigure(20);
 
 %% --- psthViewer --
 % psthViewer(spikeTimes, clu, eventTimes, window, trGroups)
@@ -195,7 +233,7 @@ timeBins = (timeBins - 1.2) * 1000;
 
 figure('name', ksDir)
 set(gcf,'uni','norm','pos',[0.142       0.073        0.78       0.825]);
-ax1 = subplot(1,2,1); 
+ax1_spk = subplot(1,2,1); 
 plotPSTHbyDepth(timeBins, depthBins, allP, eventName, 'norm', [], lfpSurfaceCh, [1, 384]);  % Normalized
 
 hold on; 
@@ -203,6 +241,7 @@ plot(xlim(), [0 0], 'b--', 'linew', 2);
 text(min(xlim())+100, -100, sprintf('LFP surface: ch #%g', lfpSurfaceCh), 'color', 'b');
 plot(xlim(), lfpSurfaceCh*10 - [3840 3840], 'k-');
 plot(xlim(), [lfpSurfaceCh*10 lfpSurfaceCh*10], 'k-');
+title(sprintf('Evoked spikes, %g trials', trialN));
 
 otherTimeMarkers = [0:200:1000 (0:200:1000)+2];
 for i = 1:length(otherTimeMarkers)
@@ -210,11 +249,11 @@ for i = 1:length(otherTimeMarkers)
     plot(x*[1 1], ylim(), 'k--');
 end
 
-ax2 = subplot(1,2,2); 
+ax2_spk = subplot(1,2,2); 
 plotPSTHbyDepth(timeBins, depthBins, allP .* normVals(:,2), eventName, '', [], lfpSurfaceCh, [1, 384]);   % Only mean is removed
 hold on; 
-colormap(ax2, jet)
-linkaxes([ax1, ax2], 'xy');
+colormap(ax2_spk, hot)
+linkaxes([ax1_lfp, ax2_lfp, ax1_spk, ax2_spk], 'xy');
 plot(xlim(), [0 0], 'b--', 'linew', 2);
 text(min(xlim())+100, -100, sprintf('LFP surface: ch #%g', lfpSurfaceCh), 'color', 'b');
 plot(xlim(), lfpSurfaceCh*10 - [3840 3840], 'k-');

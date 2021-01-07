@@ -27,7 +27,7 @@ hold on;
 colorbar;
     
 xlim([-500 1400]);
-ylim([-500 3900]);
+ylim([-500 3800]);
 
 xlabel(['time (ms)']);
 ylabel('Distance from pia (LFP surface, µm)')
@@ -39,4 +39,3 @@ for i = 1:length(chNumToShow)
 end
 
 %makepretty;
-

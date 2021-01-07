@@ -18,4 +18,4 @@ c_neg = ([n_neg-1:-1:0; n_neg-1:-1:0; ones(1,n_neg)*n_neg]' / n_neg).^gamma;
 cm = [c_pos ; 1,1,1; c_neg];
 cm = cm(end:-1:1,:);  
 
-colormap(cm);
+colormap(gca, cm);

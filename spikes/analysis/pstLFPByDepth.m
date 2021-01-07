@@ -1,6 +1,6 @@
 
 
-function [event_trig_lfp, ts] = pstLFPByDepth(lfpFilename, lfpFs, nChansInFile, eventTimes, lfpSurfaceCh, antiStaggering)
+function [event_trig_lfp, event_trig_lfp_aver, event_trig_CSD, ts] = pstLFPByDepth(lfpFilename, lfpFs, nChansInFile, eventTimes, lfpSurfaceCh, antiStaggering)
 % function [timeBins, depthBins, allP] = psthByDepth(spikeTimes, ...
 %   spikeDepths, depthBinSize, timeBinSize, eventTimes, win, bslWin[, bslEvents])
 %
@@ -33,7 +33,21 @@ for ee = 1 : nTrial
 
     if antiStaggering
         thisLFP = squeeze(mean(reshape(thisLFP',size(thisLFP,2),2,[]),2))';  % Spatial averaging across the same depths (two sites in a row)
+%         thisLFP = thisLFP(1:2:end, :, :);  % Only use half of sites
     end
     
     event_trig_lfp(:,:,ee) = thisLFP;
 end
+
+% Postprocessing
+gainFactor = 2.3438; 
+event_trig_lfp = event_trig_lfp * gainFactor;  % In uV
+
+% -- Compute CSD --
+event_trig_lfp_aver = median(event_trig_lfp, 3);
+event_trig_lfp_aver = smoothdata(event_trig_lfp_aver,1, 'movmedian', 5);
+
+event_trig_CSD = CSD(event_trig_lfp_aver' * 1e-6, lfpFs, (1+antiStaggering)*10e-6, 'ifplot', 0, 'inverse', 2*(1+antiStaggering)*10e-6)';
+event_trig_CSD = smoothdata(event_trig_CSD, 1, 'gaussian', 5);
+% event_trig_CSD = CSD(event_trig_lfp_aver' * 1e-6, lfpFs, (1+antiStaggering)*10e-6, 'ifplot', 1)';
+
