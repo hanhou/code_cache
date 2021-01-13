@@ -14,7 +14,7 @@ nClips = 10;
 clipDur = 1; % seconds
 startTime = 3; % skip first seconds
 % surfacePowerCutoff = 3; % Surface channel = Drop -3 dB power from median (50% median power)
-corrAverRange = 10;
+corrAverRange = 30;
 
 % load nClips one-sec samples
 d = dir(lfpFilename); 
@@ -93,6 +93,8 @@ surfaceGuessByPower = find(powerLowBand > median(powerLowBand), 1, 'last'); % La
 corrToAver = surfaceGuessByPower-corrAverRange: surfaceGuessByPower;
 lfpCorrForSurface = mean(lfpCorr(corrToAver, :));  % Average the correlation coeff
 [~, lfpSurfaceCh] = min(diff(smooth(lfpCorrForSurface)));  % Fastest decay of the corr coeff
+
+% figure(); plot(lfpCorrForSurface); hold on; plot([lfpSurfaceCh lfpSurfaceCh], ylim(),'r--')
 
 if antiStaggering
     lfpSurfaceCh = lfpSurfaceCh * 2;

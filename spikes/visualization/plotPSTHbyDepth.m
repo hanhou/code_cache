@@ -29,6 +29,8 @@ end
 xlim([-500 1400]);
 ylim([-500 3900]);
 
+
+
 xlabel(['time from ' eventName ' (ms)']);
 % xlim([min(timeBins) max(timeBins)]);
 % ylabel('depth on electrode array (µm)')

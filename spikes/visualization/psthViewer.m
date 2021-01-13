@@ -159,6 +159,11 @@ if isempty(myData.plotAxes)
     myData.plotAxes(3) = subplot(3,3,[7 8]);
     myData.plotAxes(4) = subplot(3,3,9);
     set(f, 'UserData', myData);
+else
+    allAxes = findall(gcf,'type','axes');
+    allPosition = reshape([allAxes.Position],[],4)';
+    [~,ind] = sortrows(allPosition,[2,1],{'descend','ascend'});
+    myData.plotAxes = allAxes(ind);
 end
 
 colors = myData.params.colors;
@@ -283,7 +288,11 @@ switch keydata.Key
         
     case 'c'
         newC = inputdlg('cluster ID?');
-        ind = find(myData.clusterIDs==str2num(newC{1}),1);
+        % ind = find(myData.clusterIDs==str2num(newC{1}),1);
+        
+        err = abs(double(myData.clusterIDs)-str2num(newC{1}));
+        ind = find(err==min(err),1);   % Closest match
+        
         if ~isempty(ind)
             myData.params.clusterIndex = ind;
         end

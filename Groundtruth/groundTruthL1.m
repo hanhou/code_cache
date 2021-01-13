@@ -1,5 +1,6 @@
 %% Ground truth experiment analysis
 clear
+close all
 % -- Settings --
 % MU thresholding
 MUThr = 0;
@@ -91,7 +92,13 @@ spktime = sp.st;
 uniqueMUPosition = unique(spikeDepths);
 spktime2 = spktime;
 
-lfpSurfaceCh = 384;  % Dummy
+% Override LFP surface depth
+if exist(fullfile(ksDir, 'lfpSurfaceOverride.txt'))
+    lfpSurfaceCh_override = dlmread(fullfile(ksDir, 'lfpSurfaceOverride.txt'));
+    fprintf('------------- Override LFP surface: %g ---------\n', lfpSurfaceCh_override)
+else
+    lfpSurfaceCh_override = []; 
+end
 
 %% --- Draw LFP, get surface channel from LFP ---
 lfpFile = dir(fullfile(ksDir, '..\', '*.lf.bin'));
@@ -101,8 +108,14 @@ lfpFs = 2500;  % neuropixels phase3a
 nChansInFile = 385;  % neuropixels phase3a, from spikeGLX
 
 % -- Compute LFP power and find surface channel --
-[lfpByChannel, allPowerEst, F, allPowerVar, lfpCorr, lfpSurfaceCh] = ...
+[lfpByChannel, allPowerEst, F, allPowerVar, lfpCorr, lfpSurfaceCh_auto] = ...
     lfpBandPower(lfpFileFullname, lfpFs, nChansInFile, [], [0, 20], antiLFPStaggering);
+
+if ~isempty(lfpSurfaceCh_override)
+    lfpSurfaceCh = lfpSurfaceCh_override;
+else
+    lfpSurfaceCh = lfpSurfaceCh_auto;
+end
 
 % chanMap = readNPY(fullfile(ksDir, 'channel_map.npy'));
 % nC = length(chanMap);
@@ -123,6 +136,7 @@ plotLFPpower(F, allPowerEst, dispRange, marginalChans, freqBands, lfpSurfaceCh, 
 set(gcf, 'name', ksDir)
 set(gcf,'uni','norm','pos',[0.338       0.145       0.443       0.693]);
 SetFigure(20);
+savefig(gcf, fullfile(ksDir, '0_LFP_power.fig'))
 
 % plot LFP correlation
 figure('Name', 'LFP correlation'); imagesc(depthOnProbe, depthOnProbe, lfpCorr); hold on;
@@ -132,6 +146,7 @@ colorbar; colormap gray;
 set(gca,'YDir','normal') 
 SetFigure(20);
 title(sprintf('LFP surface = %g um', lfpSurfaceCh*10));
+savefig(gcf, fullfile(ksDir, '1_LFP_corr.fig'))
 
 %% --- stim-triggered LFP ---
 photoStimTime = photoStimTime + 0.0014; % LFP offset
@@ -179,6 +194,7 @@ title('CSD, \muA/mm^3 (\color{blue}sink, \color{red}source\color{black})');
 
 SetFigure(20);
 drawnow;
+savefig(gcf, fullfile(ksDir, '2_LFP_depth.fig'))
 
 % -- Show some averaged LFP
 figure('name', ['Stim-triggered LFP', ksDir]);
@@ -208,6 +224,7 @@ set(gca, 'YDir','reverse')
 title(sprintf('%g trials', trialN));
 xlim([-200 1400])
 SetFigure(20);
+savefig(gcf, fullfile(ksDir, '2_LFP_example.fig'))
 
 %% --- psthViewer --
 % psthViewer(spikeTimes, clu, eventTimes, window, trGroups)
@@ -221,6 +238,7 @@ window = [0, 3];
 otherTimeMarkers = [1.2:0.2:2.2 (1.2:0.2:2.2)+0.002];
 psthViewer(sp.st, sp.clu, goCue, window, trialGroups, templateDepths, waveforms, otherTimeMarkers, lfpSurfaceCh)
 set(gcf, 'name', ksDir)
+savefig(gcf, fullfile(ksDir, '3_PSTH_viewer.fig'))
 
 
 %% --- PSTHbyDepth ---
@@ -252,7 +270,7 @@ end
 ax2_spk = subplot(1,2,2); 
 plotPSTHbyDepth(timeBins, depthBins, allP .* normVals(:,2), eventName, '', [], lfpSurfaceCh, [1, 384]);   % Only mean is removed
 hold on; 
-colormap(ax2_spk, hot)
+colormap(ax2_spk, jet)
 linkaxes([ax1_lfp, ax2_lfp, ax1_spk, ax2_spk], 'xy');
 plot(xlim(), [0 0], 'b--', 'linew', 2);
 text(min(xlim())+100, -100, sprintf('LFP surface: ch #%g', lfpSurfaceCh), 'color', 'b');
@@ -265,6 +283,8 @@ for i = 1:length(otherTimeMarkers)
 end
 SetFigure(20);
 drawnow;
+savefig(gcf, fullfile(ksDir, '4_PSTH_depth.fig'))
+
 
 %% --- Driftmap ---
 [spikeTimes, spikeAmps, spikeDepths_driftmap, spikeSites] = ksDriftmap(ksDir);
@@ -272,6 +292,7 @@ figure('name', ksDir)
 plotDriftmap(spikeTimes, spikeAmps, spikeDepths_driftmap);
 plot(xlim(), [lfpSurfaceCh lfpSurfaceCh]*10, 'b--', 'linew', 2);
 text(min(xlim())+100, lfpSurfaceCh*10+100, sprintf('LFP surface: ch #%g', lfpSurfaceCh), 'color', 'b');
+savefig(gcf, fullfile(ksDir, '5_driftmap.fig'))
 
 % makepretty;
 
@@ -282,9 +303,12 @@ recordingDur = sp.st(end);
 
 [pdfs, cdfs] = computeWFampsOverDepth(spikeAmps, spikeDepths_driftmap, ampBins, depthBins, recordingDur);
 plotWFampCDFs(pdfs, cdfs, ampBins, depthBins, lfpSurfaceCh);
+savefig(gcf, fullfile(ksDir, '6_spike_amp.fig'))
+
 
 %% --- Retrieve any unit from the plot ---
-yPos = 1725;
+locationToFind = 680;
+yPos = lfpSurfaceCh*10 - locationToFind;
 ind = abs(uniqueMUPosition - yPos) < depthBinSize;
 closest_pos = uniqueMUPosition(ind);
 for i=1:length(closest_pos)
