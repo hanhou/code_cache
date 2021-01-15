@@ -122,9 +122,9 @@ myData.saveBtn = uicontrol('Style', 'pushbutton', 'String', 'Save user-defined s
 set(myData.saveBtn, 'Enable', 'off');
 
 % -- Load saved user surface, if any --
-[path, ~, ~] = fileparts(lfpFilename);
-if exist(fullfile(path, 'lfpSurfaceUser.txt'))
-    myData.lfpSurfaceChUser = dlmread(fullfile(path, 'lfpSurfaceUser.txt'));
+[path, name, ~] = fileparts(lfpFilename);
+if exist(fullfile(path, [name '.lfpSurfaceUser.txt']))
+    myData.lfpSurfaceChUser = dlmread(fullfile(path, [name '.lfpSurfaceUser.txt']));
 else
     myData.lfpSurfaceChUser = nan; 
 end
@@ -244,7 +244,7 @@ xlim(dispRange);
 xlabel('Frequency (Hz)');
 ylabel('Distance to probe tip (um)');
 set(gca, 'YDir', 'normal'); hold on;
-title('Power specdtrum')
+title('Power spectrum')
 h_l1 = drawSurfaceLines(lfpSurfaceCh, lfpSurfaceChUser);
 if ~isempty(myData.ylimUser); ylim(myData.ylimUser);  end
 
@@ -308,9 +308,9 @@ set(gcf, 'UserData', myData);
 
 function saveBtn(~, ~)
 myData = get(gcf, 'UserData');
-[path, ~, ~] = fileparts(myData.lfpFilename);
+[path, name, ~] = fileparts(myData.lfpFilename);
 if ~isnan(myData.lfpSurfaceChUser)
-    dlmwrite(fullfile(path, 'lfpSurfaceUser.txt'), myData.lfpSurfaceChUser);
+    dlmwrite(fullfile(path, [name '.lfpSurfaceUser.txt']), myData.lfpSurfaceChUser);
 end
 set(myData.saveBtn, 'Enable', 'off');
 
