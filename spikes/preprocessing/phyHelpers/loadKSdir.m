@@ -86,7 +86,8 @@ winv = readNPY(fullfile(ksDir, 'whitening_mat_inv.npy'));
 if exist(fullfile(ksDir, 'events.csv')) 
     eventFile = fullfile(ksDir, 'events.csv');
     events = csvread(eventFile);
-
+else
+    events = [];
 end
 
 

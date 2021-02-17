@@ -1,4 +1,4 @@
-
+ 
 
 function psthViewer(spikeTimes, clu, eventTimes, window, trGroups, templateDepths, waveforms, otherTimeMarkers, lfpSurfaceCh)
 % function psthViewer(spikeTimes, clu, eventTimes, window, trGroups)

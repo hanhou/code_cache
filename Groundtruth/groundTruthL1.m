@@ -1,18 +1,19 @@
 %% Ground truth experiment analysis
 clear
 close all
-% -- Settings --
+
+%% -- Settings --
 % MU thresholding
 MUThr = 0;
 gainFactor = 0.6/512/500*1e6;
 antiLFPStaggering = true;
 
 % Depth PSTH
-depthBinSize = 20; % in units of the channel coordinates, in this case µm
-timeBinSize = 0.001; % seconds
+depthBinSize = 10; % in units of the channel coordinates, in this case µm
+timeBinSize = 0.0002; % seconds
 bslWin = [-0.2 -0.05]; % window in which to compute "baseline" rates for normalization
 
-ksDir = uigetdir('e:\catGT\');
+ksDir = uigetdir('F:\catGT\');
 
 % cat_folder = 'E:\catGT\HH100\catgt_GroundTruth04_g0\';
 % run_name = 'GroundTruth04';
@@ -41,24 +42,47 @@ channel_positions = readNPY([ks_folder 'channel_positions.npy']);
 % ycoords = channel_positions(:,2);
 %}
 
-trialStartFile = dir(fullfile(ksDir, '..\..\', '*XD_2_0_0.adj.txt'));
-goCueFile = dir(fullfile(ksDir, '..\..\', '*XD_2_1_1200.adj.txt'));
-
-trialStart = dlmread(fullfile(trialStartFile.folder, trialStartFile.name));
-goCue = dlmread(fullfile(goCueFile.folder, goCueFile.name));
-trialN = length(goCue); % trial number of the spike
-
-% Compensate drift of goCue VS photostim (due to catGT error) !!!
-if exist(fullfile(ksDir, 'catGTLastError.txt'))
-    catGTLastError = dlmread(fullfile(ksDir, 'catGTLastError.txt'));
-    fprintf('------------- catGT ERROR corrected: %g sec/%g trials ---------\n', catGTLastError, trialN)
+old = dir(fullfile(ksDir, '..\..\', '*XD_2_1_1200.adj.txt'));
+if ~isempty(old)
+    triggerType = 0;  % Dave's method. No laser info
+elseif contains(ksDir, '0p2ms') || contains(ksDir,'0p5ms')   % Patch for 0.2ms/0.5ms pulses
+    triggerType = 0.5;  % No laser pulse recorded in NIDQ due to very short pulses (why?)
 else
-    catGTLastError = 0; 
+    triggerType = 1;  % With laser info
 end
-goCue = goCue + (1:trialN)' * catGTLastError/trialN;
-photoStimTime = goCue + 1.2;
+    
+if triggerType == 0
+    trialStartFile = dir(fullfile(ksDir, '..\..\', '*XD_2_0_0.adj.txt'));
+    goCueFile = dir(fullfile(ksDir, '..\..\', '*XD_2_1_1200.adj.txt'));
 
-% Use loadKSdir
+    trialStart = dlmread(fullfile(trialStartFile.folder, trialStartFile.name));
+    goCue = dlmread(fullfile(goCueFile.folder, goCueFile.name));
+    trialN = length(goCue); % trial number of the spike
+
+    % Compensate drift of goCue VS photostim (due to catGT error) !!!
+    if exist(fullfile(ksDir, 'catGTLastError.txt'))
+        catGTLastError = dlmread(fullfile(ksDir, 'catGTLastError.txt'));
+        fprintf('------------- catGT ERROR corrected: %g sec/%g trials ---------\n', catGTLastError, trialN)
+    else
+        catGTLastError = 0; 
+    end
+    goCue = goCue + (1:trialN)' * catGTLastError/trialN;
+    photoStim = goCue + 1.2;
+elseif triggerType == 1
+%     goCueFile = dir(fullfile(ksDir, '..\..\', '*XD_4_1_100.adj.txt'));
+%     goCue = dlmread(fullfile(goCueFile.folder, goCueFile.name));
+
+    photoStimFile = dir(fullfile(ksDir, '..\..\', '*XA_3_2.adj.txt'));
+    photoStim = dlmread(fullfile(photoStimFile.folder, photoStimFile.name));
+    trialN = length(photoStim); 
+elseif triggerType == 0.5
+    goCueFile = dir(fullfile(ksDir, '..\..\', '*XD_4_1_100.adj.txt'));
+    goCue = dlmread(fullfile(goCueFile.folder, goCueFile.name));
+    photoStim = sort([goCue + 0.1; goCue + 1.1; goCue + 2.1]);
+    trialN = length(photoStim); 
+end
+
+% === Use loadKSdir ===all
 sp = loadKSdir(ksDir);
 
 % Get spike depth and amplitude in uV
@@ -91,6 +115,16 @@ spikeDepths = spikeDepths(bigUnits);
 spktime = sp.st;
 uniqueMUPosition = unique(spikeDepths);
 spktime2 = spktime;
+
+% === Use JRClust ===
+JRCResultFile = dir(fullfile(ksDir, '..\', '*_res.mat'));
+if ~isempty(JRCResultFile)
+    res = load(fullfile(JRCResultFile.folder, JRCResultFile.name));
+    spikeAmpsuVJRC = abs(double(res.spikeAmps)) * gainFactor;
+    bigUnits = spikeAmpsuVJRC >= MUThr;
+    spJRC.st = double(res.spikeTimes(bigUnits)) / 30000; 
+    spikeDepthsJRC = double(res.spikePositions(:,2));
+end
 
 % Override LFP surface depth
 if exist(fullfile(ksDir, 'lfpSurfaceOverride.txt'))
@@ -149,11 +183,16 @@ title(sprintf('LFP surface = %g um', lfpSurfaceCh*10));
 savefig(gcf, fullfile(ksDir, '1_LFP_corr.fig'))
 
 %% --- stim-triggered LFP ---
-photoStimTime = photoStimTime + 0.0014; % LFP offset
+photoStim = photoStim + 0.0014; % LFP offset
 
 fprintf('Stim-triggered LFP.....');
-[event_trig_lfp_all, event_trig_lfp_aver, event_trig_CSD, lfp_ts] = pstLFPByDepth(lfpFileFullname, lfpFs, nChansInFile, photoStimTime, lfpSurfaceCh, antiLFPStaggering);
+[event_trig_lfp_all, event_trig_lfp_aver, event_trig_CSD, lfp_ts] = pstLFPByDepth(lfpFileFullname, lfpFs, nChansInFile, photoStim, lfpSurfaceCh, antiLFPStaggering);
 fprintf('Done!\n');
+
+%% --- stim-triggered AP ---
+rawFile = dir(fullfile(ksDir, '..\', '*.ap.bin'));
+rawFileFullname = fullfile(rawFile.folder, rawFile.name);
+[event_trig_raw, event_trig_raw_aver, ts] = pstRawAPByDepth(rawFileFullname, sp.sample_rate, nChansInFile, photoStim);
 
 %% -- Plotting
 figure('name', ksDir)
@@ -167,7 +206,12 @@ text(min(xlim())+100, -100, sprintf('LFP surface: ch #%g', lfpSurfaceCh), 'color
 plot(xlim(), lfpSurfaceCh*10 - [3840 3840], 'k-');
 plot(xlim(), [lfpSurfaceCh*10 lfpSurfaceCh*10], 'k-');
 
-otherTimeMarkers = [0:200:1000 (0:200:1000)+2];
+if triggerType == 0
+    otherTimeMarkers = [0:200:1000 (0:200:1000)+2];
+else
+    otherTimeMarkers = [0 2];
+end
+
 for i = 1:length(otherTimeMarkers)
     x = otherTimeMarkers(i);
     plot(x*[1 1], ylim(), 'k--');
@@ -200,30 +244,7 @@ savefig(gcf, fullfile(ksDir, '2_LFP_depth.fig'))
 figure('name', ['Stim-triggered LFP', ksDir]);
 set(gcf,'uni','norm','pos',[0.651       0.081       0.339       0.825]);
 hold on;
-lfpActualDepthToShow = -300:300:3500;
-lfpActualDepth = (lfpSurfaceCh - (0:nC-1)*(1+antiLFPStaggering))*10; 
-gain = 5;
 
-for dd = 1:length(lfpActualDepthToShow)
-    % subplot(length(lfpActualDepthToShow), 1, dd);
-    [~, thisIdx] = min(abs(lfpActualDepthToShow(dd) - lfpActualDepth));
-    offset = lfpActualDepth(thisIdx);
-    thisLFP = squeeze(event_trig_lfp_all(thisIdx,:,:))';
-    thisLFP = thisLFP / range(thisLFP(:)) * mean(diff(lfpActualDepthToShow) * gain);
-    shadedErrorBar(lfp_ts * 1000, -thisLFP + offset, {@median, @(x) 2*std(x,[],1)/sqrt(size(x,1))});
-end
-
-for i = 1:length(otherTimeMarkers)
-    x = otherTimeMarkers(i);
-    plot(x*[1 1], ylim(), 'k--');
-end
-
-% linkaxes(findall(gcf,'type','axes'),'y');
-linkaxes([gca ax1_lfp],'xy');
-set(gca, 'YDir','reverse')
-title(sprintf('%g trials', trialN));
-xlim([-200 1400])
-SetFigure(20);
 savefig(gcf, fullfile(ksDir, '2_LFP_example.fig'))
 
 %% --- psthViewer --
@@ -234,9 +255,16 @@ savefig(gcf, fullfile(ksDir, '2_LFP_example.fig'))
 % vector of all ones. 
 trialGroups = ones(size(sp.events)); 
 
-window = [0, 3];
-otherTimeMarkers = [1.2:0.2:2.2 (1.2:0.2:2.2)+0.002];
-psthViewer(sp.st, sp.clu, goCue, window, trialGroups, templateDepths, waveforms, otherTimeMarkers, lfpSurfaceCh)
+if triggerType == 0
+    window = [0, 3];
+    otherTimeMarkers = [1.2:0.2:2.2 (1.2:0.2:2.2)+0.002];
+    psthViewer(sp.st, sp.clu, goCue, window, trialGroups, templateDepths, waveforms, otherTimeMarkers, lfpSurfaceCh)
+else
+    window = [-0.2, 1];
+    otherTimeMarkers = [0 0.002];
+    psthViewer(sp.st, sp.clu, photoStim, window, trialGroups, templateDepths, waveforms, otherTimeMarkers, lfpSurfaceCh)
+end
+
 set(gcf, 'name', ksDir)
 savefig(gcf, fullfile(ksDir, '3_PSTH_viewer.fig'))
 
@@ -245,9 +273,18 @@ savefig(gcf, fullfile(ksDir, '3_PSTH_viewer.fig'))
 psthType = ''; % show the normalized version
 eventName = 'stimulus onset'; % for figure labeling
 
-[timeBins, depthBins, allP, normVals] = psthByDepth(sp.st, spikeDepths, ...
-    depthBinSize, timeBinSize, goCue, window, bslWin);
-timeBins = (timeBins - 1.2) * 1000;
+% -- Kilosort
+if triggerType == 0
+    window = [0, 3];
+    [timeBins, depthBins, allP, normVals] = psthByDepth(sp.st, spikeDepths, ...
+        depthBinSize, timeBinSize, goCue, window, bslWin);
+    timeBins = (timeBins - 1.2) * 1000;
+else
+    window = [-0.2, 1];
+    [timeBins, depthBins, allP, normVals] = psthByDepth(spJRC.st, spikeDepthsJRC, ...
+        depthBinSize, timeBinSize, photoStim, window, bslWin);
+    timeBins = timeBins * 1000;
+end
 
 figure('name', ksDir)
 set(gcf,'uni','norm','pos',[0.142       0.073        0.78       0.825]);
@@ -261,7 +298,12 @@ plot(xlim(), lfpSurfaceCh*10 - [3840 3840], 'k-');
 plot(xlim(), [lfpSurfaceCh*10 lfpSurfaceCh*10], 'k-');
 title(sprintf('Evoked spikes, %g trials', trialN));
 
-otherTimeMarkers = [0:200:1000 (0:200:1000)+2];
+if triggerType == 0
+    otherTimeMarkers = [0:200:1000 (0:200:1000)+2];
+else
+    otherTimeMarkers = [0 2];
+end
+
 for i = 1:length(otherTimeMarkers)
     x = otherTimeMarkers(i);
     plot(x*[1 1], ylim(), 'k--');
@@ -307,7 +349,7 @@ savefig(gcf, fullfile(ksDir, '6_spike_amp.fig'))
 
 
 %% --- Retrieve any unit from the plot ---
-locationToFind = 680;
+locationToFind = 1975;
 yPos = lfpSurfaceCh*10 - locationToFind;
 ind = abs(uniqueMUPosition - yPos) < depthBinSize;
 closest_pos = uniqueMUPosition(ind);
