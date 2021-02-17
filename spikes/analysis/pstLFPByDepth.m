@@ -25,7 +25,7 @@ event_trig_lfp = nan(nDepth, length(ts), nTrial);
 
 for ee = 1 : nTrial
     startIdx = round((eventTimes(ee)+win(1))*lfpFs);
-    thisLFP = double(mmf.Data.x(1 : end-1, startIdx : startIdx+length(ts)-1));  % Remove sync channel
+    thisLFP = double(mmf.Data.x(1 : end-1, startIdx : min(end, startIdx+length(ts)-1)));  % Remove sync channel
     
     thisLFP(192,:) = mean(thisLFP(191, :),1); % Duplicate reference channel
     thisLFP = bsxfun(@minus, thisLFP, median(thisLFP,2));  % Remove self-median
@@ -36,7 +36,7 @@ for ee = 1 : nTrial
 %         thisLFP = thisLFP(1:2:end, :, :);  % Only use half of sites
     end
     
-    event_trig_lfp(:,:,ee) = thisLFP;
+    event_trig_lfp(:,1:size(thisLFP,2),ee) = thisLFP;
 end
 
 % Postprocessing
@@ -44,7 +44,7 @@ gainFactor = 2.3438;
 event_trig_lfp = event_trig_lfp * gainFactor;  % In uV
 
 % -- Compute CSD --
-event_trig_lfp_aver = median(event_trig_lfp, 3);
+event_trig_lfp_aver = nanmedian(event_trig_lfp, 3);
 event_trig_lfp_aver = smoothdata(event_trig_lfp_aver,1, 'movmedian', 5);
 
 event_trig_CSD = CSD(event_trig_lfp_aver' * 1e-6, lfpFs, (1+antiStaggering)*10e-6, 'ifplot', 0, 'inverse', 2*(1+antiStaggering)*10e-6)';

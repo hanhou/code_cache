@@ -10,12 +10,12 @@ for dd = 1:length(rootDirs)
     thisDir = rootDirs{dd};
     allMeta = dir(fullfile(thisDir, '**', '*.ap.meta'));
 
-    try
-        for fN = 1:length(allMeta)
+    for fN = 1:length(allMeta)
+        try
             imecDir = allMeta(fN).folder;
             groundTruthL1(imecDir);
+        catch
         end
-    catch
-        
+        close all;
     end
 end
