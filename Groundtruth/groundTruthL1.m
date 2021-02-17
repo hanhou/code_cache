@@ -1,6 +1,6 @@
 function groundTruthL1(imecDir)
 %% Ground truth experiment analysis
-ksDir = [imecDir '\imec0_ks2'];
+ksDir = [imecDir '\' dir([imecDir, '\imec*ks2']).name];
 nidqDir = [imecDir '\..\'];
 
 %% -- Settings --
