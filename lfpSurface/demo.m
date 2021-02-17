@@ -3,7 +3,7 @@
 % Han Hou 2021
 
 clear 
-close all
+% close all
 
 %% == Parameters ==
 probe = '1.0';

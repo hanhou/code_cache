@@ -4,7 +4,7 @@ function [lfpCorrCoef, lfpSurfaceChAuto] = lfpSurfaceGUI(lfpFilename, lfpPara)
 % Han Hou 2021
 
 nClips = 10;
-clipDurMax = 1; % seconds
+clipDurMax = 2; % seconds
 startTime = 3; % skip first seconds
 
 lfpFs = lfpPara.Fs;  % sampling rate of lfp
@@ -17,7 +17,9 @@ outChannels = lfpPara.outChannels; % Channels that are outside the brain for sur
 d = dir(lfpFilename); 
 nSamps = d.bytes/2/nChansInFile;
 nClipSamps = round(lfpFs*clipDurMax);
-sampStarts = round(linspace(lfpFs*startTime, nSamps-nClipSamps, nClips+1)); 
+% sampStarts = round(linspace(lfpFs*startTime, nSamps-nClipSamps, nClips+1));    % Regular interval
+sampStarts = round(rand(1,nClips+1) * (nSamps-nClipSamps - lfpFs*startTime));    % Random
+
 nClipSamps = min(round(lfpFs*clipDurMax), diff(sampStarts(1:2)));  % Ensure the clips are not over-lapped (for short file)
 
 mmf = memmapfile(lfpFilename, 'Format', {'int16', [nChansInFile nSamps], 'x'});
@@ -94,7 +96,7 @@ end
 
 % -- Generate plots --
 fig = figure(); hold on;
-set(gcf,'defaultAxesFontSize',15);
+set(gcf,'defaultAxesFontSize',15, 'name', lfpFilename);
 set(gcf,'uni','norm','pos',[0.019       0.054       0.957       0.867]);
 ax(1) = subplot(2,3,[1 4]);
 ax(2) = subplot(2,3,2);
@@ -311,6 +313,7 @@ myData = get(gcf, 'UserData');
 [path, name, ~] = fileparts(myData.lfpFilename);
 if ~isnan(myData.lfpSurfaceChUser)
     dlmwrite(fullfile(path, [name '.lfpSurfaceUser.txt']), myData.lfpSurfaceChUser);
+    dlmwrite(fullfile(path, '\imec0_ks2\lfpSurfaceOverride.txt'), myData.lfpSurfaceChUser);
 end
 set(myData.saveBtn, 'Enable', 'off');
 

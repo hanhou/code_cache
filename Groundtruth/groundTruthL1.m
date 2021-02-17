@@ -9,11 +9,16 @@ gainFactor = 0.6/512/500*1e6;
 antiLFPStaggering = true;
 
 % Depth PSTH
-depthBinSize = 10; % in units of the channel coordinates, in this case µm
-timeBinSize = 0.0002; % seconds
+depthBinSize = 20; % in units of the channel coordinates, in this case µm
+timeBinSize = 0.00025; % seconds
 bslWin = [-0.2 -0.05]; % window in which to compute "baseline" rates for normalization
 
-ksDir = uigetdir('F:\catGT\');
+% LFP offset (due to filter)
+LFPOffset = 0.0014;
+
+imecDir = uigetdir('F:\catGT\HH102');
+ksDir = [imecDir '\imec0_ks2'];
+nidqDir = [imecDir '\..\'];
 
 % cat_folder = 'E:\catGT\HH100\catgt_GroundTruth04_g0\';
 % run_name = 'GroundTruth04';
@@ -42,18 +47,24 @@ channel_positions = readNPY([ks_folder 'channel_positions.npy']);
 % ycoords = channel_positions(:,2);
 %}
 
-old = dir(fullfile(ksDir, '..\..\', '*XD_2_1_1200.adj.txt'));
+old = dir(fullfile(nidqDir, '*XD_2_1_1200.adj.txt'));
+
+pulseWidth = 0.002;
 if ~isempty(old)
     triggerType = 0;  % Dave's method. No laser info
-elseif contains(ksDir, '0p2ms') || contains(ksDir,'0p5ms')   % Patch for 0.2ms/0.5ms pulses
+elseif contains(ksDir, '0p2ms') 
     triggerType = 0.5;  % No laser pulse recorded in NIDQ due to very short pulses (why?)
+    pulseWidth = 0.0002;
+elseif contains(ksDir,'0p5ms')   % Patch for 0.2ms/0.5ms pulses
+    triggerType = 0.5;  % No laser pulse recorded in NIDQ due to very short pulses (why?)
+    pulseWidth = 0.0005;
 else
     triggerType = 1;  % With laser info
 end
     
 if triggerType == 0
-    trialStartFile = dir(fullfile(ksDir, '..\..\', '*XD_2_0_0.adj.txt'));
-    goCueFile = dir(fullfile(ksDir, '..\..\', '*XD_2_1_1200.adj.txt'));
+    trialStartFile = dir(fullfile(nidqDir, '*XD_2_0_0.adj.txt'));
+    goCueFile = dir(fullfile(nidqDir, '*XD_2_1_1200.adj.txt'));
 
     trialStart = dlmread(fullfile(trialStartFile.folder, trialStartFile.name));
     goCue = dlmread(fullfile(goCueFile.folder, goCueFile.name));
@@ -72,11 +83,11 @@ elseif triggerType == 1
 %     goCueFile = dir(fullfile(ksDir, '..\..\', '*XD_4_1_100.adj.txt'));
 %     goCue = dlmread(fullfile(goCueFile.folder, goCueFile.name));
 
-    photoStimFile = dir(fullfile(ksDir, '..\..\', '*XA_3_2.adj.txt'));
+    photoStimFile = dir(fullfile(nidqDir, '*XA_3_2.adj.txt'));
     photoStim = dlmread(fullfile(photoStimFile.folder, photoStimFile.name));
     trialN = length(photoStim); 
 elseif triggerType == 0.5
-    goCueFile = dir(fullfile(ksDir, '..\..\', '*XD_4_1_100.adj.txt'));
+    goCueFile = dir(fullfile(nidqDir, '*XD_4_1_100.adj.txt'));
     goCue = dlmread(fullfile(goCueFile.folder, goCueFile.name));
     photoStim = sort([goCue + 0.1; goCue + 1.1; goCue + 2.1]);
     trialN = length(photoStim); 
@@ -117,13 +128,16 @@ uniqueMUPosition = unique(spikeDepths);
 spktime2 = spktime;
 
 % === Use JRClust ===
-JRCResultFile = dir(fullfile(ksDir, '..\', '*_res.mat'));
+JRCResultFile = dir(fullfile(imecDir, '*_res.mat'));
 if ~isempty(JRCResultFile)
+    ifJRC = true;
     res = load(fullfile(JRCResultFile.folder, JRCResultFile.name));
     spikeAmpsuVJRC = abs(double(res.spikeAmps)) * gainFactor;
     bigUnits = spikeAmpsuVJRC >= MUThr;
     spJRC.st = double(res.spikeTimes(bigUnits)) / 30000; 
     spikeDepthsJRC = double(res.spikePositions(:,2));
+else
+    ifJRC = false;
 end
 
 % Override LFP surface depth
@@ -135,7 +149,7 @@ else
 end
 
 %% --- Draw LFP, get surface channel from LFP ---
-lfpFile = dir(fullfile(ksDir, '..\', '*.lf.bin'));
+lfpFile = dir(fullfile(imecDir, '*.lf.bin'));
 lfpFileFullname = fullfile(lfpFile.folder, lfpFile.name);
 
 lfpFs = 2500;  % neuropixels phase3a
@@ -170,7 +184,7 @@ plotLFPpower(F, allPowerEst, dispRange, marginalChans, freqBands, lfpSurfaceCh, 
 set(gcf, 'name', ksDir)
 set(gcf,'uni','norm','pos',[0.338       0.145       0.443       0.693]);
 SetFigure(20);
-savefig(gcf, fullfile(ksDir, '0_LFP_power.fig'))
+savefig(gcf, fullfile(imecDir, '0_LFP_power.fig'))
 
 % plot LFP correlation
 figure('Name', 'LFP correlation'); imagesc(depthOnProbe, depthOnProbe, lfpCorr); hold on;
@@ -180,22 +194,20 @@ colorbar; colormap gray;
 set(gca,'YDir','normal') 
 SetFigure(20);
 title(sprintf('LFP surface = %g um', lfpSurfaceCh*10));
-savefig(gcf, fullfile(ksDir, '1_LFP_corr.fig'))
+savefig(gcf, fullfile(imecDir, '1_LFP_corr.fig'))
 
 %% --- stim-triggered LFP ---
-photoStim = photoStim + 0.0014; % LFP offset
-
 fprintf('Stim-triggered LFP.....');
-[event_trig_lfp_all, event_trig_lfp_aver, event_trig_CSD, lfp_ts] = pstLFPByDepth(lfpFileFullname, lfpFs, nChansInFile, photoStim, lfpSurfaceCh, antiLFPStaggering);
+[event_trig_lfp_all, event_trig_lfp_aver, event_trig_CSD, lfp_ts] = pstLFPByDepth(lfpFileFullname, lfpFs, nChansInFile, photoStim + LFPOffset, lfpSurfaceCh, antiLFPStaggering);
 fprintf('Done!\n');
 
 %% --- stim-triggered AP ---
-rawFile = dir(fullfile(ksDir, '..\', '*.ap.bin'));
+rawFile = dir(fullfile(imecDir, '*.ap.bin'));
 rawFileFullname = fullfile(rawFile.folder, rawFile.name);
 [event_trig_raw, event_trig_raw_aver, ts] = pstRawAPByDepth(rawFileFullname, sp.sample_rate, nChansInFile, photoStim);
 
 %% -- Plotting
-figure('name', ksDir)
+figure('name', imecDir)
 set(gcf,'uni','norm','pos',[0.009        0.08        0.64       0.826]);
 
 ax1_lfp = subplot(1,2,1); 
@@ -238,14 +250,38 @@ title('CSD, \muA/mm^3 (\color{blue}sink, \color{red}source\color{black})');
 
 SetFigure(20);
 drawnow;
-savefig(gcf, fullfile(ksDir, '2_LFP_depth.fig'))
+savefig(gcf, fullfile(imecDir, '2_LFP_depth.fig'))
 
 % -- Show some averaged LFP
 figure('name', ['Stim-triggered LFP', ksDir]);
 set(gcf,'uni','norm','pos',[0.651       0.081       0.339       0.825]);
 hold on;
+lfpActualDepthToShow = -300:300:3500;
+lfpActualDepth = (lfpSurfaceCh - (0:nC-1)*(1+antiLFPStaggering))*10; 
+gain = 5;
 
-savefig(gcf, fullfile(ksDir, '2_LFP_example.fig'))
+for dd = 1:length(lfpActualDepthToShow)
+    % subplot(length(lfpActualDepthToShow), 1, dd);
+    [~, thisIdx] = min(abs(lfpActualDepthToShow(dd) - lfpActualDepth));
+    offset = lfpActualDepth(thisIdx);
+    thisLFP = squeeze(event_trig_lfp_all(thisIdx,:,:))';
+    thisLFP = thisLFP / range(thisLFP(:)) * mean(diff(lfpActualDepthToShow) * gain);
+    shadedErrorBar(lfp_ts * 1000, -thisLFP + offset, {@median, @(x) 2*std(x,[],1)/sqrt(size(x,1))});
+end
+
+for i = 1:length(otherTimeMarkers)
+    x = otherTimeMarkers(i);
+    plot(x*[1 1], ylim(), 'k--');
+end
+
+% linkaxes(findall(gcf,'type','axes'),'y');
+linkaxes([gca ax1_lfp],'xy');
+set(gca, 'YDir','reverse')
+title(sprintf('%g trials', trialN));
+xlim([-200 1400])
+SetFigure(20);
+
+savefig(gcf, fullfile(imecDir, '2_LFP_example.fig'))
 
 %% --- psthViewer --
 % psthViewer(spikeTimes, clu, eventTimes, window, trGroups)
@@ -257,16 +293,16 @@ trialGroups = ones(size(sp.events));
 
 if triggerType == 0
     window = [0, 3];
-    otherTimeMarkers = [1.2:0.2:2.2 (1.2:0.2:2.2)+0.002];
+    otherTimeMarkers = [1.2:0.2:2.2 (1.2:0.2:2.2) + pulseWidth];
     psthViewer(sp.st, sp.clu, goCue, window, trialGroups, templateDepths, waveforms, otherTimeMarkers, lfpSurfaceCh)
 else
     window = [-0.2, 1];
-    otherTimeMarkers = [0 0.002];
+    otherTimeMarkers = [0 pulseWidth];
     psthViewer(sp.st, sp.clu, photoStim, window, trialGroups, templateDepths, waveforms, otherTimeMarkers, lfpSurfaceCh)
 end
 
 set(gcf, 'name', ksDir)
-savefig(gcf, fullfile(ksDir, '3_PSTH_viewer.fig'))
+savefig(gcf, fullfile(imecDir, '3_PSTH_viewer.fig'))
 
 
 %% --- PSTHbyDepth ---
@@ -281,12 +317,12 @@ if triggerType == 0
     timeBins = (timeBins - 1.2) * 1000;
 else
     window = [-0.2, 1];
-    [timeBins, depthBins, allP, normVals] = psthByDepth(spJRC.st, spikeDepthsJRC, ...
+    [timeBins, depthBins, allP, normVals] = psthByDepth(sp.st, spikeDepths, ...
         depthBinSize, timeBinSize, photoStim, window, bslWin);
     timeBins = timeBins * 1000;
 end
 
-figure('name', ksDir)
+figure('name', imecDir)
 set(gcf,'uni','norm','pos',[0.142       0.073        0.78       0.825]);
 ax1_spk = subplot(1,2,1); 
 plotPSTHbyDepth(timeBins, depthBins, allP, eventName, 'norm', [], lfpSurfaceCh, [1, 384]);  % Normalized
@@ -296,12 +332,12 @@ plot(xlim(), [0 0], 'b--', 'linew', 2);
 text(min(xlim())+100, -100, sprintf('LFP surface: ch #%g', lfpSurfaceCh), 'color', 'b');
 plot(xlim(), lfpSurfaceCh*10 - [3840 3840], 'k-');
 plot(xlim(), [lfpSurfaceCh*10 lfpSurfaceCh*10], 'k-');
-title(sprintf('Evoked spikes, %g trials', trialN));
+title(sprintf('Evoked spikes (KS2), %g trials', trialN));
 
 if triggerType == 0
-    otherTimeMarkers = [0:200:1000 (0:200:1000)+2];
+    otherTimeMarkers = [0:200:1000 (0:200:1000)+pulseWidth*1000];
 else
-    otherTimeMarkers = [0 2];
+    otherTimeMarkers = [0 pulseWidth]*1000;
 end
 
 for i = 1:length(otherTimeMarkers)
@@ -325,16 +361,65 @@ for i = 1:length(otherTimeMarkers)
 end
 SetFigure(20);
 drawnow;
-savefig(gcf, fullfile(ksDir, '4_PSTH_depth.fig'))
+savefig(gcf, fullfile(imecDir, '4_PSTH_depth_KS2.fig'))
 
+% --- JRC ---
+if ifJRC
+    if triggerType == 0
+        window = [0, 3];
+        [timeBins, depthBins, allP, normVals] = psthByDepth(spJRC.st, spikeDepthsJRC, ...
+            depthBinSize, timeBinSize, goCue, window, bslWin);
+        timeBins = (timeBins - 1.2) * 1000;
+    else
+        window = [-0.2, 1];
+        [timeBins, depthBins, allP, normVals] = psthByDepth(spJRC.st, spikeDepthsJRC, ...
+            depthBinSize, timeBinSize, photoStim, window, bslWin);
+        timeBins = timeBins * 1000;
+    end
+
+    figure('name', imecDir)
+    set(gcf,'uni','norm','pos',[0.142       0.073        0.78       0.825]);
+    ax1_spk = subplot(1,2,1); 
+    plotPSTHbyDepth(timeBins, depthBins, allP, eventName, 'norm', [], lfpSurfaceCh, [1, 384]);  % Normalized
+
+    hold on; 
+    plot(xlim(), [0 0], 'b--', 'linew', 2);
+    text(min(xlim())+100, -100, sprintf('LFP surface: ch #%g', lfpSurfaceCh), 'color', 'b');
+    plot(xlim(), lfpSurfaceCh*10 - [3840 3840], 'k-');
+    plot(xlim(), [lfpSurfaceCh*10 lfpSurfaceCh*10], 'k-');
+    title(sprintf('Evoked spikes (JRC), %g trials', trialN));
+
+    for i = 1:length(otherTimeMarkers)
+        x = otherTimeMarkers(i);
+        plot(x*[1 1], ylim(), 'k--');
+    end
+
+    ax2_spk = subplot(1,2,2); 
+    plotPSTHbyDepth(timeBins, depthBins, allP .* normVals(:,2), eventName, '', [], lfpSurfaceCh, [1, 384]);   % Only mean is removed
+    hold on; 
+    colormap(ax2_spk, jet)
+    linkaxes([ax1_lfp, ax2_lfp, ax1_spk, ax2_spk], 'xy');
+    plot(xlim(), [0 0], 'b--', 'linew', 2);
+    text(min(xlim())+100, -100, sprintf('LFP surface: ch #%g', lfpSurfaceCh), 'color', 'b');
+    plot(xlim(), lfpSurfaceCh*10 - [3840 3840], 'k-');
+    plot(xlim(), [lfpSurfaceCh*10 lfpSurfaceCh*10], 'k-');
+
+    for i = 1:length(otherTimeMarkers)
+        x = otherTimeMarkers(i);
+        plot(x*[1 1], ylim(), 'k--');
+    end
+    SetFigure(20);
+    drawnow;
+    savefig(gcf, fullfile(imecDir, '4_PSTH_depth_JRC.fig'))
+end
 
 %% --- Driftmap ---
 [spikeTimes, spikeAmps, spikeDepths_driftmap, spikeSites] = ksDriftmap(ksDir);
-figure('name', ksDir)
+figure('name', imecDir)
 plotDriftmap(spikeTimes, spikeAmps, spikeDepths_driftmap);
 plot(xlim(), [lfpSurfaceCh lfpSurfaceCh]*10, 'b--', 'linew', 2);
 text(min(xlim())+100, lfpSurfaceCh*10+100, sprintf('LFP surface: ch #%g', lfpSurfaceCh), 'color', 'b');
-savefig(gcf, fullfile(ksDir, '5_driftmap.fig'))
+savefig(gcf, fullfile(imecDir, '5_driftmap.fig'))
 
 % makepretty;
 
@@ -345,7 +430,7 @@ recordingDur = sp.st(end);
 
 [pdfs, cdfs] = computeWFampsOverDepth(spikeAmps, spikeDepths_driftmap, ampBins, depthBins, recordingDur);
 plotWFampCDFs(pdfs, cdfs, ampBins, depthBins, lfpSurfaceCh);
-savefig(gcf, fullfile(ksDir, '6_spike_amp.fig'))
+savefig(gcf, fullfile(imecDir, '6_spike_amp.fig'))
 
 
 %% --- Retrieve any unit from the plot ---
