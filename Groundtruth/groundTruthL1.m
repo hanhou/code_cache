@@ -1,6 +1,7 @@
+function groundTruthL1(imecDir)
 %% Ground truth experiment analysis
-clear
-close all
+ksDir = [imecDir '\imec0_ks2'];
+nidqDir = [imecDir '\..\'];
 
 %% -- Settings --
 % MU thresholding
@@ -15,10 +16,6 @@ bslWin = [-0.2 -0.05]; % window in which to compute "baseline" rates for normali
 
 % LFP offset (due to filter)
 LFPOffset = 0.0014;
-
-imecDir = uigetdir('F:\catGT\HH102');
-ksDir = [imecDir '\imec0_ks2'];
-nidqDir = [imecDir '\..\'];
 
 % cat_folder = 'E:\catGT\HH100\catgt_GroundTruth04_g0\';
 % run_name = 'GroundTruth04';
