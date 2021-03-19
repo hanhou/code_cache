@@ -200,6 +200,8 @@ fprintf('Done!\n');
 
 %% --- stim-triggered AP ---
 rawFile = dir(fullfile(imecDir, '*.ap.bin'));
+[~,idx]= sort([rawFile.bytes],'descend');
+rawFile = rawFile(idx(1));
 rawFileFullname = fullfile(rawFile.folder, rawFile.name);
 [event_trig_raw, event_trig_raw_aver, ts] = pstRawAPByDepth(rawFileFullname, sp.sample_rate, nChansInFile, photoStim);
 
@@ -408,6 +410,19 @@ if ifJRC
     SetFigure(20);
     drawnow;
     savefig(gcf, fullfile(imecDir, '4_PSTH_depth_JRC.fig'))
+    
+    % Export for Dave
+    psthWin = [-0.01 0.02];
+    
+    spikeDepthInTheBrain = (lfpSurfaceCh * 10 - spikeDepthsJRC)/1000;
+    allSpikeTimeAligned = spJRC.st - photoStim';
+    spikesInWin = psthWin(1) <= allSpikeTimeAligned & allSpikeTimeAligned <= psthWin(2);  
+    allSpikeTimeAligned = allSpikeTimeAligned(spikesInWin);
+    allSpikeDepth = spikeDepthInTheBrain(any(spikesInWin,2));  % One spike will never be in more than one windows.
+    nReps = length(photoStim);
+    
+    save(fullfile(imecDir, 'psthToDave.mat'), 'allSpikeTimeAligned', 'allSpikeDepth', 'nReps');
+        
 end
 
 %% --- Driftmap ---

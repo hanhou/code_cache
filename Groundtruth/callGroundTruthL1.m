@@ -1,6 +1,6 @@
 %% == Mannual selection ==
-% imecDir = uigetdir('F:\catGT\HH102');
-% groundTruthL1(imecDir);
+imecDir = uigetdir('F:\catGT\HH102');
+groundTruthL1(imecDir);
 
 %% == Batch processing ==
 rootDirs = {'F:\catGT\HH102\', 'E:\catGT'};
@@ -25,4 +25,11 @@ for dd = 1:length(rootDirs)
         end
         close all;
     end
+end
+
+
+%% 
+figs = findall(0, 'type', 'figure');
+for f=1:length(figs)
+    figure(f); xlim([-2 10])
 end
