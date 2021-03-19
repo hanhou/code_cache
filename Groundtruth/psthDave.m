@@ -14,16 +14,20 @@ allSpikeDepth(artifacts) = [];
 
 % Fig 8D
 figDDepthROI = [1.5 2.5];   % Only CC in figure D
-figDTimeBinSize = 2.5 * 1e-3; % 2.5 ms
+figDTimeBinSize = 0.2 * 1e-3; % 0.25 ms
 figDTimeBins = -0.01:figDTimeBinSize:0.02;   % 0.25 ms win
 figDSpikeTimes = allSpikeTimeAligned(figDDepthROI(1) <= allSpikeDepth & allSpikeDepth <= figDDepthROI(2));
 [n, ~] = hist(figDSpikeTimes, figDTimeBins);
 
+psthEvoked = n/nReps/figDTimeBinSize;
+psthBaseline = mean(psthEvoked(figDTimeBins < 0));
+
 subplot(1,2,1); 
-plot(figDTimeBins*1000, n/nReps/figDTimeBinSize, 'k-');
-hold on; plot([0 0], ylim, 'k--');
+plot(figDTimeBins*1000, psthEvoked - psthBaseline, 'k-');
+
+hold on; plot([0 0], ylim, 'k--'); plot([2 2], ylim, 'k--'); plot(xlim, [0 0], 'k--')
 xlabel('Time from stimulus onset (ms)');
-ylabel('spikes/s');
+ylabel('delta spikes/s');
 title(sprintf('time bin = %g ms', figDTimeBinSize*1000));
 
 % Fig 8E
@@ -44,6 +48,6 @@ plot(psthEvoked - psthBaseline, figEDepthBins, 'k-');
 title(sprintf('depth bin = %g um', (figEDepthBins(2) - figEDepthBins(1))*1000));
 hold on; plot([0 0], ylim, 'k--')
 set(gca,'YDir','reverse')
-xlabel('spikes/s');
+xlabel('delta spikes/s');
 ylabel('Depth in the brain (mm)');
 
