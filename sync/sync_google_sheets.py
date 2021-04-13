@@ -12,18 +12,28 @@ import pandas as pd
 import time
 import os.path
 
+is_windows = 'nt' in os.name
+
 # ======== Settings =======
 # Remote
-gspread_client = gspread.service_account(filename='E:/Data_for_ingestion/gspread_key.json')
+if is_windows:
+    gspread_client = gspread.service_account(filename='E:/Data_for_ingestion/gspread_key.json')
+else:
+    gspread_client = gspread.service_account(filename='/mnt/e/Data_for_ingestion/gspread_key.json')
+    
 remote_meta_file_animal = 'Surgery, water restriction and training'
 remote_meta_file_lab = 'Lab metadata'
 
 # Local
-with open('D:/Han_Sync/Svoboda/Scripts/map-ephys/dj_local_conf.json') as f:
-    dj_conf = json.load(f)
-local_meta_dir_animal = dj_conf['custom']['behavior_bpod']['meta_dir']
-local_meta_dir_lab = dj_conf['custom']['behavior_bpod']['meta_lab_dir']
-
+if is_windows:
+    with open('D:/Han_Sync/Svoboda/Scripts/map-ephys/dj_local_conf.json') as f:
+        dj_conf = json.load(f)
+    local_meta_dir_animal = dj_conf['custom']['behavior_bpod']['meta_dir']
+    local_meta_dir_lab = dj_conf['custom']['behavior_bpod']['meta_lab_dir']
+else:
+    local_meta_dir_animal = '/mnt/e/Data_for_ingestion/Foraging_behavior/Metadata'
+    local_meta_dir_lab = '/mnt/e/Data_for_ingestion/Foraging_behavior/Metadata_lab'
+    
 
 def fetch_sheet_titles(notebook_name):
     notebook = gspread_client.open(notebook_name)
