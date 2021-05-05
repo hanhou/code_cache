@@ -23,10 +23,10 @@ eventMarkerDur.choiceR = 3;
 sTrig = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.bitcodeEachbit * 2)); 
 
 % Solve the bitcode-start and choiceL overlapping bug...
-ITI = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.ITI));  
+iti = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.ITI));  
 choiceL = [];
-for i=1:length(ITI)
-    this_choice_idx = find(sTrig(i) < sTrig & sTrig < ITI(i));
+for i=1:length(iti)
+    this_choice_idx = find(sTrig(i) < sTrig & sTrig < iti(i));
     choiceL = [choiceL; sTrig(this_choice_idx)];
     sTrig(this_choice_idx) = [];
 end
@@ -40,10 +40,30 @@ choiceR = dlmread(getTxtFileName(sessionDir, chan.behavior, eventMarkerDur.choic
 
 bitcode = zeros(length(sTrig), bitCodeDigits);
 
+[STRIG_, GOCUE_, CHOICEL_, CHOICER_, REWARD_, ITI_] = deal(1,2,3,4,5,6);
+digMarkerPerTrial = nan(length(sTrig), 6);  % [STrig, goCue, choiceL, choiceR, reward, ITI】
+digMarkerPerTrial(:,[STRIG_, GOCUE_, ITI_]) = [sTrig, goCue, iti];  % Must exists 
+
 for i = 1:length(sTrig)  % For each trial
+    % Parse bitcode
     bitHighThis = bitsAll(bitsAll>sTrig(i) & bitsAll<eTrig(i));
     bitHighPositionThis = round((bitHighThis - sTrig(i) - eventMarkerDur.bitcodeEachbit * 1e-3) / (2 * eventMarkerDur.bitcodeEachbit * 1e-3));
     bitcode(i, bitHighPositionThis) = 1;
+    
+    % Fill in the digMarkerPerTrial matrix
+    thisL = choiceL(sTrig(i) < choiceL & choiceL < iti(i));
+    if ~isempty(thisL)
+        digMarkerPerTrial(i, CHOICEL_) = thisL;
+    end
+    thisR = choiceR(sTrig(i) < choiceR & choiceR < iti(i));
+    if ~isempty(thisR)
+        digMarkerPerTrial(i, CHOICER_) = thisR;
+    end        
+    thisRew = reward(sTrig(i) < reward & reward < iti(i));
+    if ~isempty(thisRew)
+        digMarkerPerTrial(i, REWARD_) = thisRew;
+    end             
+    
 end
 
 bitCodeS = num2str(bitcode, '%d');
@@ -53,7 +73,7 @@ imecFolders = dir(fullfile(sessionDir, '*imec*'));
 for f = 1:length(imecFolders)  % Save the same bitcode.mat to each imec folder 
     toSave = [imecFolders(f).name(1 : strfind(imecFolders(f).name,'imec')-1) 'bitcode.mat'];
     save(fullfile(imecFolders(f).folder, imecFolders(f).name, toSave), ...
-        'bitcode', 'bitCodeS', 'goCue', 'sTrig', 'reward', 'choiceL', 'choiceR', 'ITI');
+        'bitcode', 'bitCodeS', 'goCue', 'sTrig', 'reward', 'choiceL', 'choiceR', 'iti', 'digMarkerPerTrial');
 end
 
 function txtFile = getTxtFileName(sessionDir, chan, duration)
