@@ -71,9 +71,20 @@ bitCodeS = num2str(bitcode, '%d');
 %% Save .mat files for ingestion
 imecFolders = dir(fullfile(sessionDir, '*imec*'));
 for f = 1:length(imecFolders)  % Save the same bitcode.mat to each imec folder 
-    toSave = [imecFolders(f).name(1 : strfind(imecFolders(f).name,'imec')-1) 'bitcode.mat'];
-    save(fullfile(imecFolders(f).folder, imecFolders(f).name, toSave), ...
+    % For DJ pipeline
+    matName = [imecFolders(f).name(1 : strfind(imecFolders(f).name,'imec')-1) 'bitcode.mat'];
+    fullFileNameDJ = fullfile(imecFolders(f).folder, imecFolders(f).name, matName);
+    save(fullFileNameDJ, ...
         'bitcode', 'bitCodeS', 'goCue', 'sTrig', 'reward', 'choiceL', 'choiceR', 'iti', 'digMarkerPerTrial');
+    
+    % For phy event_plugin_hh
+    ks2Folder = dir(fullfile(fullfile(imecFolders(f).folder, imecFolders(f).name), 'imec*_ks2'));
+    fullFileNamePhy = fullfile(ks2Folder.folder, ks2Folder.name, matName);
+    copyfile(fullFileNameDJ, fullFileNamePhy);
+    
+    fprintf('%s saved!\n', fullFileNameDJ);
+    fprintf('%s saved!\n', fullFileNamePhy);
+    
 end
 
 function txtFile = getTxtFileName(sessionDir, chan, duration)
