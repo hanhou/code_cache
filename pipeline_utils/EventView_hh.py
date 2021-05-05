@@ -23,11 +23,13 @@ axis_list = []
 plot_handles = []
 
 STRIG_, GOCUE_, CHOICEL_, CHOICER_, REWARD_, ITI_ = 0, 1, 2, 3, 4, 5
-styles_single_color = [['-', 2], ['-', 0.5], ['--', 1], [':', 1], ['-.', 1]]
+styles_single_color = [['-', 2], ['-', 1], ['--', 1], [':', 1], ['-.', 0.5]]
 styles_multiple_colors = [[[1.0000, 0.0078, 0.0078], '-', 2],
                           [[0.03137, 0.5725, 0.9882], '-', 2],
-                          [[1.0000, 0.0078, 0.0078], '--', 0.5],
-                          [[0.03137, 0.5725, 0.9882], '--', 0.5]]
+                          [[1.0000, 0.0078, 0.0078], '--', 1],
+                          [[0.03137, 0.5725, 0.9882], '--', 1],
+                          [[0.87, 0.87, 0.87], '--', 1],
+                          ]
 
 
 def _make_default_colormap():
@@ -50,39 +52,52 @@ def load_bitcode_mat():  # Directly load and parse mat file
     ignore_trials = np.all(np.isnan(dig_marker_per_trial[:, [CHOICEL_, CHOICER_]]), 1)
     reward_trials = ~np.isnan(dig_marker_per_trial[:, REWARD_])
     noreward_trials = ~ignore_trials & ~reward_trials
-    L_trials = ~np.isnan(dig_marker_per_trial[:, CHOICEL_])
-    R_trials = ~np.isnan(dig_marker_per_trial[:, CHOICER_])
+    choiceL_trials = ~np.isnan(dig_marker_per_trial[:, CHOICEL_])
+    choiceR_trials = ~np.isnan(dig_marker_per_trial[:, CHOICER_])
+    choice_times = np.nanmean(dig_marker_per_trial[:, [CHOICEL_, CHOICER_]], 1)
     events = {}
 
     # ----- Define events times ------
-
     # 1. Choice_direction
-    events['choice_direction'] = {'Left': mat['choiceL'], 'Right': mat['choiceR']}
+    # events['choice_direction'] = {'Left': mat['choiceL'], 'Right': mat['choiceR']}
 
     # 2. Choice_outcome
-    choice_times = np.nanmean(dig_marker_per_trial[:, [CHOICEL_, CHOICER_]], 1)
-    choice_reward = choice_times[reward_trials]
-    choice_noreward = choice_times[noreward_trials]
-    events['choice_outcome'] = {'reward': choice_reward, 'no_reward': choice_noreward}
+    # choice_reward = choice_times[reward_trials]
+    # choice_noreward = choice_times[noreward_trials]
+    # events['choice_outcome'] = {'reward': choice_reward, 'no_reward': choice_noreward}
 
-    # 3. Gocue_outcome
-    gocue_reward = dig_marker_per_trial[reward_trials, GOCUE_]
-    gocue_noreward = dig_marker_per_trial[noreward_trials, GOCUE_]
+    # 1. Gocue_outcome
+    # gocue_reward = dig_marker_per_trial[reward_trials, GOCUE_]
+    # gocue_noreward = dig_marker_per_trial[noreward_trials, GOCUE_]
+    gocue_L_reward = dig_marker_per_trial[reward_trials & choiceL_trials, GOCUE_]
+    gocue_R_reward = dig_marker_per_trial[reward_trials & choiceR_trials, GOCUE_]
+    gocue_L_noreward = dig_marker_per_trial[noreward_trials & choiceL_trials, GOCUE_]
+    gocue_R_noreward = dig_marker_per_trial[noreward_trials & choiceR_trials, GOCUE_]
     gocue_ignore = dig_marker_per_trial[ignore_trials, GOCUE_]
-    events['gocue_outcome'] = {'reward': gocue_reward, 'no_reward': gocue_noreward, 'ignore': gocue_ignore}
+    # events['gocue_direction_outcome'] = {'reward': gocue_reward, 'no_reward': gocue_noreward, 'ignore': gocue_ignore}
+    events['gocue_direction_outcome'] = {'L_reward': gocue_L_reward, 'R_reward': gocue_R_reward,
+                                         'L_noreward': gocue_L_noreward, 'R_noreward': gocue_R_noreward,
+                                         'ignore': gocue_ignore}
+    # 2. Choice_direction_outcome
+    choice_L_reward = choice_times[reward_trials & choiceL_trials]
+    choice_R_reward = choice_times[reward_trials & choiceR_trials]
+    choice_L_noreward = choice_times[noreward_trials & choiceL_trials]
+    choice_R_noreward = choice_times[noreward_trials & choiceR_trials]
+    events['choice_direction_outcome'] = {'L_reward': choice_L_reward, 'R_reward': choice_R_reward,
+                                          'L_noreward': choice_L_noreward, 'R_noreward': choice_R_noreward}
 
     # iti_reward = dig_marker_per_trial[reward_trials, ITI_]
     # iti_noreward = dig_marker_per_trial[noreward_trials, ITI_]
     # iti_ignore = dig_marker_per_trial[ignore_trials, ITI_]
     # events['iti_outcome'] = {'reward': iti_reward, 'no_reward': iti_noreward, 'ignore': iti_ignore}
 
-    # 4. ITI_choice*outcome
-    iti_L_reward = dig_marker_per_trial[reward_trials & L_trials, ITI_]
-    iti_L_noreward = dig_marker_per_trial[noreward_trials & L_trials, ITI_]
-    iti_R_reward = dig_marker_per_trial[reward_trials & R_trials, ITI_]
-    iti_R_noreward = dig_marker_per_trial[noreward_trials & R_trials, ITI_]
-    events['iti_choice_outcome'] = {'L_reward': iti_L_reward, 'R_reward': iti_R_reward,
-                                    'L_noreward': iti_L_noreward, 'R_noreward': iti_R_noreward}
+    # 3. ITI_choice*outcome
+    iti_L_reward = dig_marker_per_trial[reward_trials & choiceL_trials, ITI_]
+    iti_R_reward = dig_marker_per_trial[reward_trials & choiceR_trials, ITI_]
+    iti_L_noreward = dig_marker_per_trial[noreward_trials & choiceL_trials, ITI_]
+    iti_R_noreward = dig_marker_per_trial[noreward_trials & choiceR_trials, ITI_]
+    events['iti_direction_outcome'] = {'L_reward': iti_L_reward, 'R_reward': iti_R_reward,
+                                       'L_noreward': iti_L_noreward, 'R_noreward': iti_R_noreward}
 
     return events
 
