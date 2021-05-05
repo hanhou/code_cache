@@ -3,7 +3,7 @@
 [fN, dirN] = uigetfile('F:\Z1\*.csv'); 
 % pts = readBigWarpLandmarks(fullfile(dirN, fN));
 pts = xlsread(fullfile(dirN,fN));
-pts = pts(:, 2:end);
+pts = pts(:, 3:end);
 
 % lastPt=find(pts(:,1)==Inf,1,'first');
 lastPt=find(isnan(pts(:,1)),1,'first');

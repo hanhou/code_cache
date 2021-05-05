@@ -16,7 +16,7 @@ if strcmp(probe, '1.0')
     lfpPara.nChansInFile = 385;   % Including the sync channel, if any  
     lfpPara.chanIdx = 1:384;   % All channels on one shank 
     lfpPara.refChan = 192;
-    lfpPara.siteDistance = 20; % vertical distance of the recording sites (um)
+    lfpPara.siteDistance = 20; % vertical distance of the recording sites (um)  
     lfpPara.antiStaggering = true;  % Average LFP from the sites of the same row on the probe
     lfpPara.freqBandForSurface = [0.5 20];  % Freq band for lfp power
 else  % NPX2.0 data (not fully tested)
