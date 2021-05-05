@@ -87,12 +87,12 @@ def load_bitcode_mat():  # Directly load and parse mat file
     return events
 
 
-class EventView(ManualClusteringView):
+class PSTHView(ManualClusteringView):
     plot_canvas_class = PlotCanvasMpl  # use matplotlib instead of OpenGL (the default)
 
     def __init__(self, c=None):
         """features is a function (cluster_id => Bunch(data, ...)) where data is a 3D array."""
-        super(EventView, self).__init__()
+        super(PSTHView, self).__init__()
         self.controller = c
         self.model = c.model
         self.supervisor = c.supervisor
@@ -192,11 +192,14 @@ class EventView(ManualClusteringView):
                 axis_psth.set_xlim(left=-2, right=3)
                 axis_psth.set_title((f'#{d}: ' if j == 0 else '') + event_plot_name, fontsize=20)
                 axis_psth.legend(loc='upper left')
+                # if j > 0: axis_psth.set_yticks([])
+
                 # psth_max_ylim = max(psth_max_ylim, max(axis_psth.get_ylim()))
 
                 axis_raster.axvline(x=0, color='white', alpha=.5, lw=1)
                 axis_raster.set_ylim(bottom=0, top=raster_top)
                 axis_raster.invert_yaxis()
+                axis_raster.set_xlabel(f'Time from {event_plot_name.split("_")[0]} (sec)', fontsize=15)
                 self.fix_axis(axis_psth, 15)
                 self.fix_axis(axis_raster, 15)
 
@@ -247,10 +250,10 @@ class EventView(ManualClusteringView):
         return rasters, np.array(activity), yrast, np.amax(yrast), len(activity)
 
 
-class EventPlugin(IPlugin):
+class PSTHPlugin(IPlugin):
     def attach_to_controller(self, controller):
         def create_event_view():
             """A function that creates and returns a view."""
-            return EventView(c=controller)
+            return PSTHView(c=controller)
 
-        controller.view_creator['EventView'] = create_event_view
+        controller.view_creator['PSTHView'] = create_event_view
