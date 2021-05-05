@@ -131,7 +131,7 @@ class EventView(ManualClusteringView):
             return
 
         for i, d in enumerate(np.arange(start=1, stop=self.nclusts * 2 * self.n_event_plots + 1)):
-            if ((d - 1) // self.n_event_plots + 1) % 2 == 0:   # This is very awkward...
+            if ((d - 1) // self.n_event_plots + 1) % 2 == 0:  # This is very awkward...
                 setattr(self, 'canvas.ax' + str(d), plt.subplot(2 * self.nclusts, self.n_event_plots, d,
                                                                 sharex=axis_list[i - self.n_event_plots]))
             else:
@@ -151,8 +151,10 @@ class EventView(ManualClusteringView):
 
         t = (time.time())
 
-        for i, d in enumerate(cluster_ids):    # For each cluster
-            for j, (event_plot_name, event_plot_events) in enumerate(self.events_all.items()):      # For each event plot
+        for i, d in enumerate(cluster_ids):  # For each cluster
+            psth_max_ylim = 0
+
+            for j, (event_plot_name, event_plot_events) in enumerate(self.events_all.items()):  # For each event plot
                 # Prepare
                 raster_top = 0
                 axis_psth = axis_list[i * (2 * self.n_event_plots) + j]
@@ -160,16 +162,16 @@ class EventView(ManualClusteringView):
 
                 axis_psth.axvline(x=0, color='white', alpha=.5)
 
-                for k, (events_name, events_this) in enumerate(event_plot_events.items()):   # For each line in each plot
+                for k, (events_name, events_this) in enumerate(event_plot_events.items()):  # For each line in each plot
                     # Get data
                     rasters, activity, yrast, ntrials, nevents = self.get_spikes(d, events_this)
                     hist, bins = np.histogram(activity, weights=np.ones(nevents) * (50 / ntrials), range=(-5, 5),
                                               bins=250)
-                            
-                    if len(cluster_ids) > 1:   # If more than one clusters are selected, only use the cluster's color
+
+                    if len(cluster_ids) > 1:  # If more than one clusters are selected, only use the cluster's color
                         this_style, this_lw = styles_single_color[k % len(styles_single_color)]
                         this_color = self.cmap[i]
-                    else:    # If only one cluster is selected, use Svoboda lab's convention (e.g., red for L, blue for R)
+                    else:  # If only one cluster is selected, use Svoboda lab's convention (e.g., red for L, blue for R)
                         this_color, this_style, this_lw = styles_multiple_colors[k % len(styles_multiple_colors)]
 
                     psth_style = {'color': this_color, 'linestyle': this_style, 'lw': this_lw}
@@ -177,6 +179,7 @@ class EventView(ManualClusteringView):
 
                     # Plot psth
                     axis_psth.plot(bins[:-1], hist, label=events_name, **psth_style)
+                    psth_max_ylim = max(psth_max_ylim, max(hist) * 1.2)
                     # axis_psth.set_xticks(np.linspace(-2, 3, 9))
 
                     # Plot raster
@@ -187,14 +190,20 @@ class EventView(ManualClusteringView):
 
                 # Axis settings
                 axis_psth.set_xlim(left=-2, right=3)
-                axis_psth.set_title(event_plot_name, fontsize=20)
+                axis_psth.set_title((f'#{d}: ' if j == 0 else '') + event_plot_name, fontsize=20)
                 axis_psth.legend(loc='upper left')
-                axis_psth.set_ylim(bottom=0, top=None)
+                # psth_max_ylim = max(psth_max_ylim, max(axis_psth.get_ylim()))
+
                 axis_raster.axvline(x=0, color='white', alpha=.5, lw=1)
                 axis_raster.set_ylim(bottom=0, top=raster_top)
                 axis_raster.invert_yaxis()
                 self.fix_axis(axis_psth, 15)
                 self.fix_axis(axis_raster, 15)
+
+            # Same y axes for psth plots
+            for j, _ in enumerate(self.events_all.items()):
+                axis_psth = axis_list[i * (2 * self.n_event_plots) + j]
+                axis_psth.set_ylim(bottom=0, top=psth_max_ylim)
 
         print(ttime, 'plotting')
         t = time.time()
