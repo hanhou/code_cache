@@ -91,6 +91,7 @@ function txtFile = getTxtFileName(sessionDir, chan, duration)
 txtFile = dir(fullfile(sessionDir, sprintf('*%g_%g.adj.txt', chan, duration)));  % Try TPrime adjusted first
 if isempty(txtFile)  % If no adj.txt, try raw txt
     txtFile = dir(fullfile(sessionDir, sprintf('*%g_%g.txt', chan, duration)));
+    fprintf('No _adj.txt found, using non-adjusted version');
 end    
 txtFile = fullfile(txtFile.folder, txtFile.name);
     
