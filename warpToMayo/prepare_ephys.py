@@ -9,15 +9,14 @@ from pathlib import Path
 from atlaselectrophysiology.extract_files import extract_data
 import os
 
-PATH_JOIN = os.path.join(root, subdir)
 
-root_path = r'v:\Ingested\SC061'
-exclude_list = [r'SC045_120920_g0_imec0\imec0_ks2_orig']
+root_path = r'V:\Ingested\SC045\catgt_SC045_120920_g0\SC045_120920_g0_imec0'
+exclude_list = []
 
 for root, subdirs, files in os.walk(root_path):
     for subdir in subdirs:
         if 'ks2_orig' in subdir:
-            this_path = PATH_JOIN
+            this_path = PATH_JOIN = os.path.join(root, subdir)
             if not any(ee in this_path for ee in exclude_list):
                 print('Processing:', this_path, '...')
 
@@ -26,5 +25,5 @@ for root, subdirs, files in os.walk(root_path):
                 ephys_path = ks_path.parent  # Path to raw ephys data
                 out_path = ephys_path.joinpath('alf')  # Save path
 
-                extract_data(ks_path, ephys_path, out_path)
+                extract_data(ks_path, ephys_path, out_path, if_ap_rmsmap=False)
 
