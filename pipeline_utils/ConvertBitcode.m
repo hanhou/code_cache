@@ -23,7 +23,7 @@ eventMarkerDur.choiceR = 3;
 sTrig = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.bitcodeEachbit * 2)); 
 
 % Solve the bitcode-start and choiceL overlapping bug...
-iti = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.ITI));  
+iti = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.ITI));
 choiceL = [];
 for i=1:length(iti)
     this_choice_idx = find(sTrig(i) < sTrig & sTrig < iti(i));
@@ -32,41 +32,63 @@ for i=1:length(iti)
 end
 
 eTrig=[sTrig(2:end); sTrig(end)+20];
-bitsAll = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.bitcodeEachbit)); 
-goCue = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.goCue)); 
-reward = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.reward)); 
-% choiceL = dlmread(getTxtFileName(sessionDir, chan.behavior, eventMarkerDur.choiceL)); 
-choiceR = dlmread(getTxtFileName(sessionDir, chan.behavior, eventMarkerDur.choiceR)); 
+bitsAll = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.bitcodeEachbit));
+goCue = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.goCue));
+reward = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.reward));
+% choiceL = dlmread(getTxtFileName(sessionDir, chan.behavior, eventMarkerDur.choiceL));
+choiceR = dlmread(getTxtFileName(sessionDir, chan.behavior, eventMarkerDur.choiceR));
 
-bitcode = zeros(length(sTrig), bitCodeDigits);
+bitcode = zeros(length(iti), bitCodeDigits);   % Use length iti to make sure (the last) trial has ended.
 
 [STRIG_, GOCUE_, CHOICEL_, CHOICER_, REWARD_, ITI_] = deal(1,2,3,4,5,6);
-digMarkerPerTrial = nan(length(sTrig), 6);  % [STrig, goCue, choiceL, choiceR, reward, ITI】
-digMarkerPerTrial(:,[STRIG_, GOCUE_, ITI_]) = [sTrig, goCue, iti];  % Must exists 
 
-for i = 1:length(sTrig)  % For each trial
+% Use iti as trial marker to exclude truncated trials
+digMarkerPerTrial = nan(length(iti), 6);  % [STrig, goCue, choiceL, choiceR, reward, ITI]
+
+% digMarkerPerTrial(:,[STRIG_, GOCUE_, ITI_]) = [sTrig, goCue, iti];  % Must exists 
+digMarkerPerTrial(:,ITI_) = iti;  % Must exists 
+
+for i = 1:length(iti)  % For each trial
+    thisStart = sTrig(find(sTrig < iti(i), 1, 'last'));  % Deal with truncated trials (only search backward from each iti)
+    digMarkerPerTrial(i, STRIG_) = thisStart;
+    digMarkerPerTrial(i, GOCUE_) = goCue(thisStart < goCue & goCue < iti(i));
+    
     % Parse bitcode
-    bitHighThis = bitsAll(bitsAll>sTrig(i) & bitsAll<eTrig(i));
-    bitHighPositionThis = round((bitHighThis - sTrig(i) - eventMarkerDur.bitcodeEachbit * 1e-3) / (2 * eventMarkerDur.bitcodeEachbit * 1e-3));
+    bitHighThis = bitsAll(thisStart < bitsAll & bitsAll < iti(i));
+    bitHighPositionThis = round((bitHighThis - thisStart - eventMarkerDur.bitcodeEachbit * 1e-3) / (2 * eventMarkerDur.bitcodeEachbit * 1e-3));
+    
+    % Error-proof
+    assert(max(bitHighPositionThis) <= bitCodeDigits, 'bitCodeDecodingError');
+    
     bitcode(i, bitHighPositionThis) = 1;
     
     % Fill in the digMarkerPerTrial matrix
-    thisL = choiceL(sTrig(i) < choiceL & choiceL < iti(i));
+    thisL = choiceL(thisStart < choiceL & choiceL < iti(i));
     if ~isempty(thisL)
         digMarkerPerTrial(i, CHOICEL_) = thisL;
     end
-    thisR = choiceR(sTrig(i) < choiceR & choiceR < iti(i));
+    thisR = choiceR(thisStart < choiceR & choiceR < iti(i));
     if ~isempty(thisR)
         digMarkerPerTrial(i, CHOICER_) = thisR;
     end        
-    thisRew = reward(sTrig(i) < reward & reward < iti(i));
+    thisRew = reward(thisStart < reward & reward < iti(i));
     if ~isempty(thisRew)
         digMarkerPerTrial(i, REWARD_) = thisRew;
     end             
-    
 end
 
 bitCodeS = num2str(bitcode, '%d');
+
+% Reassign goCue and STrig to make sure they're all complete trials (i.e., paired with an iti)
+sTrig = digMarkerPerTrial(:,STRIG_);
+goCue = digMarkerPerTrial(:,GOCUE_);
+
+% Debug
+% figure(); plot(goCue,1,'g>'); hold on; plot(iti,2,'k*'); plot(sTrig,0,'bo'); ylim([-2 5]);
+% for i = 1:length(iti)    ;text(iti(i),2,num2str(i));  end
+% for i = 1:length(goCue)   ;text(goCue(i),1,num2str(i)); end
+% for i = 1:length(sTrig)   ;text(sTrig(i),0,num2str(i)); end
+
 
 %% Save .mat files for ingestion
 imecFolders = dir(fullfile(sessionDir, '*imec*'));
