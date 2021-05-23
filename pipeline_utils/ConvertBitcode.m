@@ -39,7 +39,7 @@ choiceR = dlmread(getTxtFileName(sessionDir, chan.behavior, eventMarkerDur.choic
 
 iti = setdiff(iti_all, [bitsAll; goCue; reward; sTrig]);
 
-bitcode = zeros(length(sTrig), bitCodeDigits);
+bitcode = zeros(length(iti), bitCodeDigits);   % Use length iti to make sure (the last) trial has ended.
 
 [STRIG_, GOCUE_, CHOICEL_, CHOICER_, REWARD_, ITI_] = deal(1,2,3,4,5,6);
 
@@ -50,7 +50,7 @@ digMarkerPerTrial = nan(length(iti), 6);  % [STrig, goCue, choiceL, choiceR, rew
 digMarkerPerTrial(:,ITI_) = iti;  % Must exists 
 
 for i = 1:length(iti)  % For each trial
-    thisStart = sTrig(find(sTrig < iti(i), 1, 'last'));  % Deal with truncated trials
+    thisStart = sTrig(find(sTrig < iti(i), 1, 'last'));  % Deal with truncated trials (only search backward from each iti)
     digMarkerPerTrial(i, STRIG_) = thisStart;
     digMarkerPerTrial(i, GOCUE_) = goCue(thisStart < goCue & goCue < iti(i));
     
@@ -75,6 +75,17 @@ for i = 1:length(iti)  % For each trial
 end
 
 bitCodeS = num2str(bitcode, '%d');
+
+% Reassign goCue and STrig to make sure they're all complete trials (i.e., paired with an iti)
+sTrig = digMarkerPerTrial(:,STRIG_);
+goCue = digMarkerPerTrial(:,GOCUE_);
+
+% Debug
+% figure(); plot(goCue,1,'g>'); hold on; plot(iti,2,'k*'); plot(sTrig,0,'bo'); ylim([-2 5]);
+% for i = 1:length(iti)    ;text(iti(i),2,num2str(i));  end
+% for i = 1:length(goCue)   ;text(goCue(i),1,num2str(i)); end
+% for i = 1:length(sTrig)   ;text(sTrig(i),0,num2str(i)); end
+
 
 %% Save .mat files for ingestion
 imecFolders = dir(fullfile(sessionDir, '*imec*'));
