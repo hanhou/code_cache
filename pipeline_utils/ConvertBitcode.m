@@ -56,7 +56,11 @@ for i = 1:length(iti)  % For each trial
     
     % Parse bitcode
     bitHighThis = bitsAll(thisStart < bitsAll & bitsAll < iti(i));
-    bitHighPositionThis = round((bitHighThis - sTrig(i) - eventMarkerDur.bitcodeEachbit * 1e-3) / (2 * eventMarkerDur.bitcodeEachbit * 1e-3));
+    bitHighPositionThis = round((bitHighThis - thisStart - eventMarkerDur.bitcodeEachbit * 1e-3) / (2 * eventMarkerDur.bitcodeEachbit * 1e-3));
+    
+    % Error-proof
+    assert(max(bitHighPositionThis) <= bitCodeDigits, 'bitCodeDecodingError');
+    
     bitcode(i, bitHighPositionThis) = 1;
     
     % Fill in the digMarkerPerTrial matrix
