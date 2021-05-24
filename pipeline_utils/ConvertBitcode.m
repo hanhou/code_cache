@@ -90,14 +90,33 @@ goCue = digMarkerPerTrial(:,GOCUE_);
 % for i = 1:length(sTrig)   ;text(sTrig(i),0,num2str(i)); end
 
 
+%% Override trial num fix (in the case where len(ephys) > len(behav))
+trialNumFixName = {'HH09_20210406', 'HH09_20210418', 'HH09_20210429'};
+trialNumFix = {1:164, 1:513, 1:393};
+
 %% Save .mat files for ingestion
 imecFolders = dir(fullfile(sessionDir, '*imec*'));
 for f = 1:length(imecFolders)  % Save the same bitcode.mat to each imec folder 
     % For DJ pipeline
     matName = [imecFolders(f).name(1 : strfind(imecFolders(f).name,'imec')-1) 'bitcode.mat'];
     fullFileNameDJ = fullfile(imecFolders(f).folder, imecFolders(f).name, matName);
-    save(fullFileNameDJ, ...
-        'bitcode', 'bitCodeS', 'goCue', 'sTrig', 'reward', 'choiceL', 'choiceR', 'iti', 'digMarkerPerTrial');
+    
+    % Trial num fix?
+    fixIndex = find(~cellfun(@isempty, regexp(sessionDir, trialNumFixName)));
+    if ~isempty(fixIndex)
+        trialNum = trialNumFix{fixIndex};
+        bitcode = bitcode(trialNum);
+        bitCodeS = bitCodeS(trialNum,:);
+        goCue = goCue(trialNum);
+        sTrig = sTrig(trialNum);
+        digMarkerPerTrial = digMarkerPerTrial(trialNum,:);
+        save(fullFileNameDJ, ...
+            'bitcode', 'bitCodeS', 'goCue', 'sTrig', 'reward', 'choiceL', 'choiceR', 'iti', 'digMarkerPerTrial', 'trialNum');
+        fprintf('Trial Number fixed!!\n')
+    else
+        save(fullFileNameDJ, ...
+            'bitcode', 'bitCodeS', 'goCue', 'sTrig', 'reward', 'choiceL', 'choiceR', 'iti', 'digMarkerPerTrial');
+    end
     
     % For phy event_plugin_hh
     ks2Folder = dir(fullfile(fullfile(imecFolders(f).folder, imecFolders(f).name), 'imec*_ks2'));
