@@ -10,32 +10,24 @@ bitCodeDigits = 20;
 
 chan.protocol = 2;  % Protocol dig marker channel
 eventMarkerDur.bitcodeEachbit = 1;
+eventMarkerDur.bitcodeFirstMultiplier = 1.5;  % The multiplier of the first bit code width
 eventMarkerDur.goCue = 10;
 eventMarkerDur.reward = 20;
 eventMarkerDur.ITI = 30;
 
 chan.behavior = 2;  % Behavior dig marker channel (I moved all behavior channel to bitcode channel in Apr 21 version)
-eventMarkerDur.choiceL = 2;   % I made a mistake in Apr version that choiceL and the start of bitcode are the SAME....
-eventMarkerDur.choiceR = 3;
+eventMarkerDur.choiceL = 2;  
+eventMarkerDur.choiceR = 2.5;
 
 %% get Ephys Bitcode
 % Start of a trial (onset of my bitcode is indicated by twice of the bitcode width)
-sTrig = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.bitcodeEachbit * 2)); 
-
-% Solve the bitcode-start and choiceL overlapping bug...
+sTrig = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.bitcodeEachbit * eventMarkerDur.bitcodeFirstMultiplier)); 
 iti = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.ITI));
-choiceL = [];
-for i=1:length(iti)
-    this_choice_idx = find(sTrig(i) < sTrig & sTrig < iti(i));
-    choiceL = [choiceL; sTrig(this_choice_idx)];
-    sTrig(this_choice_idx) = [];
-end
 
-eTrig=[sTrig(2:end); sTrig(end)+20];
 bitsAll = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.bitcodeEachbit));
 goCue = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.goCue));
 reward = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.reward));
-% choiceL = dlmread(getTxtFileName(sessionDir, chan.behavior, eventMarkerDur.choiceL));
+choiceL = dlmread(getTxtFileName(sessionDir, chan.behavior, eventMarkerDur.choiceL));
 choiceR = dlmread(getTxtFileName(sessionDir, chan.behavior, eventMarkerDur.choiceR));
 
 bitcode = zeros(length(iti), bitCodeDigits);   % Use length iti to make sure (the last) trial has ended.
@@ -55,11 +47,13 @@ for i = 1:length(iti)  % For each trial
     
     % Parse bitcode
     bitHighThis = bitsAll(thisStart < bitsAll & bitsAll < iti(i));
-    bitHighPositionThis = round((bitHighThis - thisStart - eventMarkerDur.bitcodeEachbit * 1e-3) / (2 * eventMarkerDur.bitcodeEachbit * 1e-3));
+    bitHighPositionThis = round((bitHighThis - thisStart - (eventMarkerDur.bitcodeFirstMultiplier - 1) * eventMarkerDur.bitcodeEachbit * 1e-3) ...
+                                 / (2 * eventMarkerDur.bitcodeEachbit * 1e-3));
     
     % Error-proof
     assert(max(bitHighPositionThis) <= bitCodeDigits, 'bitCodeDecodingError');
-    
+   
+    % Set bitcode
     bitcode(i, bitHighPositionThis) = 1;
     
     % Fill in the digMarkerPerTrial matrix
@@ -129,9 +123,16 @@ for f = 1:length(imecFolders)  % Save the same bitcode.mat to each imec folder
 end
 
 function txtFile = getTxtFileName(sessionDir, chan, duration)
-txtFile = dir(fullfile(sessionDir, sprintf('*%g_%g.adj.txt', chan, duration)));  % Try TPrime adjusted first
+% Parse non-integer duration
+if mod(duration,1)
+    durationStr = sprintf('%gp%g', floor(duration), mod(duration,1)*10);
+else
+    durationStr = sprintf('%g', duration);
+end
+
+txtFile = dir(fullfile(sessionDir, sprintf('*%g_%s.adj.txt', chan, durationStr)));  % Try TPrime adjusted first
 if isempty(txtFile)  % If no adj.txt, try raw txt
-    txtFile = dir(fullfile(sessionDir, sprintf('*%g_%g.txt', chan, duration)));
+    txtFile = dir(fullfile(sessionDir, sprintf('*%g_%s.txt', chan, durationStr)));
     fprintf('No _adj.txt found, using non-adjusted version');
 end    
 txtFile = fullfile(txtFile.folder, txtFile.name);

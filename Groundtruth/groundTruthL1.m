@@ -15,7 +15,7 @@ timeBinSize = 0.00025; % seconds
 bslWin = [-0.2 -0.05]; % window in which to compute "baseline" rates for normalization
 
 % LFP offset (due to filter)
-LFPOffset = 0.0014;
+LFPOffset = 0 ; 0.0014;
 
 % cat_folder = 'E:\catGT\HH100\catgt_GroundTruth04_g0\';
 % run_name = 'GroundTruth04';
