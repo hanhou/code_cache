@@ -10,7 +10,9 @@ from atlaselectrophysiology.extract_files import extract_data
 import os
 
 
-root_path = r'V:\Ingested\SC045\catgt_SC045_120920_g0\SC045_120920_g0_imec0'
+# root_path = r'i:\HH102\catgt_HH102S10_C04P02_g0\HH102S10_C04P02_g0_imec0'
+# root_path = r'V:\Ingested\SC045\catgt_SC045_120920_g0\SC045_120920_g0_imec0'
+root_path = r'v:\Ingested\SC045\catgt_SC045_120920_g0\SC045_120920_g0_imec2'
 exclude_list = []
 
 for root, subdirs, files in os.walk(root_path):
@@ -25,5 +27,9 @@ for root, subdirs, files in os.walk(root_path):
                 ephys_path = ks_path.parent  # Path to raw ephys data
                 out_path = ephys_path.joinpath('alf')  # Save path
 
-                extract_data(ks_path, ephys_path, out_path, if_ap_rmsmap=False)
+                if not out_path.exists():
+                    out_path.mkdir()
+
+                # extract_data(ks_path, ephys_path, out_path, if_ap_rmsmap=False)
+                extract_data(ks_path, ephys_path, out_path)
 

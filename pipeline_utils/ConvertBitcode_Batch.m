@@ -10,6 +10,6 @@ for f = 1:length(allSubFolder)
     try
         ConvertBitcode(thisFolder);
     catch
-        fprintf('!!! Errors in processing %s', thisFolder);
+        fprintf('!!! Errors in processing %s\n', thisFolder);
     end
 end
