@@ -17,9 +17,9 @@ is_windows = 'nt' in os.name
 # ======== Settings =======
 # Remote
 if is_windows:
-    gspread_client = gspread.service_account(filename='E:/Data_for_ingestion/gspread_key.json')
+    gspread_client = gspread.service_account(filename='F:/Data_for_ingestion/gspread_key.json')
 else:
-    gspread_client = gspread.service_account(filename='/mnt/e/Data_for_ingestion/gspread_key.json')
+    gspread_client = gspread.service_account(filename='/mnt/f/Data_for_ingestion/gspread_key.json')
     
 remote_meta_file_animal = 'Surgery, water restriction and training'
 remote_meta_file_lab = 'Lab metadata'
@@ -31,8 +31,8 @@ if is_windows:
     local_meta_dir_animal = dj_conf['custom']['behavior_bpod']['meta_dir']
     local_meta_dir_lab = dj_conf['custom']['behavior_bpod']['meta_lab_dir']
 else:
-    local_meta_dir_animal = '/mnt/e/Data_for_ingestion/Foraging_behavior/Metadata'
-    local_meta_dir_lab = '/mnt/e/Data_for_ingestion/Foraging_behavior/Metadata_lab'
+    local_meta_dir_animal = '/mnt/f/Data_for_ingestion/Foraging_behavior/Metadata'
+    local_meta_dir_lab = '/mnt/f/Data_for_ingestion/Foraging_behavior/Metadata_lab'
     
 
 def fetch_sheet_titles(notebook_name):
