@@ -17,27 +17,34 @@ eventMarkerDur.ITI = 30;
 
 chan.behavior = 2;  % Behavior dig marker channel (I moved all behavior channel to bitcode channel in Apr 21 version)
 eventMarkerDur.choiceL = 2;  
-eventMarkerDur.choiceR = 2.5;
+eventMarkerDur.choiceR = 3;
 
 chan.bpodstart = 1;
-chan.zaber = 4;
+% chan.zaber = 4;
 chan.cameras = [5, 6, 7];
 
 %% get Ephys Bitcode
 % Start of a trial (onset of my bitcode is indicated by twice of the bitcode width)
-sTrig = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.bitcodeEachbit * eventMarkerDur.bitcodeFirstMultiplier)); 
+sTrig = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.bitcodeEachbit * 2)); 
 iti = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.ITI));
+
+% Solve the bitcode-start and choiceL overlapping bug...
+choiceL = [];
+for i=1:length(iti)
+    this_choice_idx = find(sTrig(i) < sTrig & sTrig < iti(i));
+    choiceL = [choiceL; sTrig(this_choice_idx)];
+    sTrig(this_choice_idx) = [];
+end
 
 bitsAll = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.bitcodeEachbit));
 goCue = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.goCue));
 reward = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.reward));
-choiceL = dlmread(getTxtFileName(sessionDir, chan.behavior, eventMarkerDur.choiceL));
 choiceR = dlmread(getTxtFileName(sessionDir, chan.behavior, eventMarkerDur.choiceR));
 
 bpodTrialStart = dlmread(getTxtFileName(sessionDir, chan.bpodstart, 0));
-zaberStepsUp = dlmread(getTxtFileName(sessionDir, chan.zaber, 0));
-zaberStepsDwn = dlmread(getTxtFileName(sessionDir, chan.zaber, 0, '.iXD'));
-zaberStepsAll = sort([zaberStepsUp; zaberStepsDwn]);
+% zaberStepsUp = dlmread(getTxtFileName(sessionDir, chan.zaber, 0));
+% zaberStepsDwn = dlmread(getTxtFileName(sessionDir, chan.zaber, 0, '.iXD'));
+% zaberStepsAll = sort([zaberStepsUp; zaberStepsDwn]);
 
 for i = 1:length(chan.cameras)
     cameras{i} = dlmread(getTxtFileName(sessionDir, chan.cameras(i), 0));
@@ -49,7 +56,7 @@ bitcode = zeros(length(iti), bitCodeDigits);   % Use length iti to make sure (th
 
 % Use iti as trial marker to exclude truncated trials
 digMarkerPerTrial = nan(length(iti), 6);  % [STrig, goCue, choiceL, choiceR, reward, ITI]
-zaberPerTrial = {};
+% zaberPerTrial = {};
 cameraPerTrial = {};
 
 % digMarkerPerTrial(:,[STRIG_, GOCUE_, ITI_]) = [sTrig, goCue, iti];  % Must exists 
@@ -98,7 +105,7 @@ for i = 1:length(iti)  % Fill in digMarkerPerTrial
     end
     
     % zaber steps (only forward protraction pulses)
-    zaberPerTrial{i} = zaberStepsAll(thisBitCodeStart < zaberStepsAll & zaberStepsAll < iti(i));
+%     zaberPerTrial{i} = zaberStepsAll(thisBitCodeStart < zaberStepsAll & zaberStepsAll < iti(i));
      
 end
 
@@ -152,16 +159,16 @@ for f = 1:length(imecFolders)  % Save the same bitcode.mat to each imec folder
         digMarkerPerTrial = digMarkerPerTrial(trialNum,:);
         save(fullFileNameDJ, ...
             'bitcode', 'bitCodeS', 'goCue', 'sTrig', 'reward', 'choiceL', 'choiceR', 'iti', 'digMarkerPerTrial', ...
-            'bpodTrialStart', 'zaberStepsUp', 'zaberStepsDwn', 'cameras', ...
+            'bpodTrialStart', 'cameras', ...
             'chan', 'eventMarkerDur', ...
-            'zaberPerTrial', 'cameraPerTrial', ...
+            'cameraPerTrial', ...
             'trialNum');
         fprintf('Trial Number fixed!!\n')
     else
         save(fullFileNameDJ, ...
             'bitcode', 'bitCodeS', 'goCue', 'sTrig', 'reward', 'choiceL', 'choiceR', 'iti', 'digMarkerPerTrial', ...
-            'bpodTrialStart', 'zaberStepsUp', 'zaberStepsDwn', 'cameras', ...
-            'zaberPerTrial', 'cameraPerTrial', ...
+            'bpodTrialStart', 'cameras', ...
+            'cameraPerTrial', ...
             'chan', 'eventMarkerDur' ...
             );
     end
