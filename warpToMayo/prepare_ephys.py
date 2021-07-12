@@ -12,7 +12,7 @@ import os
 
 # root_path = r'i:\HH102\catgt_HH102S10_C04P02_g0\HH102S10_C04P02_g0_imec0'
 # root_path = r'V:\Ingested\SC045\catgt_SC045_120920_g0\SC045_120920_g0_imec0'
-root_path = r'I:\SC045_120920_g0_imec0'
+root_path = r'v:\HH\HH09\catgt_HH09_20210429_g0\HH09_20210429_g0_imec1'
 exclude_list = []
 
 for root, subdirs, files in os.walk(root_path):
