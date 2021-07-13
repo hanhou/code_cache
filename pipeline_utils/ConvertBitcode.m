@@ -22,6 +22,8 @@ eventMarkerDur.choiceR = 2.5;
 chan.bpodstart = 1;
 chan.zaber = 4;
 chan.cameras = [5, 6, 7];
+chan.cameraNameInDJ = {'Camera 1', 'Camera 0', 'Camera 2'};   % (From bottom to up): Chameleon3 CM3-U3-13Y3M-CS (FLIR); 
+                                                              % 300 Hz Bottom face, 300 Hz Side face, 100 Hz Body
 
 %% get Ephys Bitcode
 % Start of a trial (onset of my bitcode is indicated by twice of the bitcode width)
