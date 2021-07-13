@@ -41,6 +41,8 @@ iti = setdiff(iti_all, [bitsAll; goCue; reward; sTrig]);
 
 bitcode = zeros(length(iti), bitCodeDigits);   % Use length iti to make sure (the last) trial has ended.
 
+% headings in datajoint pipeline, ephys.TrialEventType
+headings = {'bitcodestart', 'go', 'choice', 'choice', 'reward', 'trialend'};
 [STRIG_, GOCUE_, CHOICEL_, CHOICER_, REWARD_, ITI_] = deal(1,2,3,4,5,6);
 
 % Use iti as trial marker to exclude truncated trials
@@ -112,11 +114,11 @@ for f = 1:length(imecFolders)  % Save the same bitcode.mat to each imec folder
         sTrig = sTrig(trialNum);
         digMarkerPerTrial = digMarkerPerTrial(trialNum,:);
         save(fullFileNameDJ, ...
-            'bitcode', 'bitCodeS', 'goCue', 'sTrig', 'reward', 'choiceL', 'choiceR', 'iti', 'digMarkerPerTrial', 'trialNum');
+            'bitcode', 'bitCodeS', 'goCue', 'sTrig', 'reward', 'choiceL', 'choiceR', 'iti', 'digMarkerPerTrial', 'headings', 'trialNum');
         fprintf('Trial Number fixed!!\n')
     else
         save(fullFileNameDJ, ...
-            'bitcode', 'bitCodeS', 'goCue', 'sTrig', 'reward', 'choiceL', 'choiceR', 'iti', 'digMarkerPerTrial');
+            'bitcode', 'bitCodeS', 'goCue', 'sTrig', 'reward', 'choiceL', 'choiceR', 'iti', 'digMarkerPerTrial', 'headings');
     end
     
     % For phy event_plugin_hh
