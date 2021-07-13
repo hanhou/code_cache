@@ -33,6 +33,7 @@ goCue = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.goCue))
 reward = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.reward));
 choiceL = dlmread(getTxtFileName(sessionDir, chan.behavior, eventMarkerDur.choiceL));
 choiceR = dlmread(getTxtFileName(sessionDir, chan.behavior, eventMarkerDur.choiceR));
+choiceR = setdiff(choiceR, choiceL);   % 2.5 * (1-20%) = 2.0!!! choice R also includes all choice L...
 
 bpodTrialStart = dlmread(getTxtFileName(sessionDir, chan.bpodstart, 0));
 zaberStepsUp = dlmread(getTxtFileName(sessionDir, chan.zaber, 0));
@@ -45,10 +46,10 @@ end
 
 bitcode = zeros(length(iti), bitCodeDigits);   % Use length iti to make sure (the last) trial has ended.
 
-[STRIG_, GOCUE_, CHOICEL_, CHOICER_, REWARD_, ITI_, BPOD_START_] = deal(1,2,3,4,5,6,7);
+[STRIG_, GOCUE_, CHOICEL_, CHOICER_, REWARD_, ITI_, BPOD_START_, ZABER_IN_POS_] = deal(1,2,3,4,5,6,7,8);
 
 % Use iti as trial marker to exclude truncated trials
-digMarkerPerTrial = nan(length(iti), 6);  % [STrig, goCue, choiceL, choiceR, reward, ITI]
+digMarkerPerTrial = nan(length(iti), 8);  % [STrig, goCue, choiceL, choiceR, reward, ITI]
 zaberPerTrial = {};
 cameraPerTrial = {};
 
@@ -99,6 +100,7 @@ for i = 1:length(iti)  % Fill in digMarkerPerTrial
     
     % zaber steps (only forward protraction pulses)
     zaberPerTrial{i} = zaberStepsAll(thisBitCodeStart < zaberStepsAll & zaberStepsAll < iti(i));
+    digMarkerPerTrial(i, ZABER_IN_POS_) = max(zaberPerTrial{i});   % The last zaber pulse of this trial
      
 end
 
@@ -121,6 +123,10 @@ bitCodeS = num2str(bitcode, '%d');
 sTrig = digMarkerPerTrial(:,STRIG_);
 goCue = digMarkerPerTrial(:,GOCUE_);
 bpodTrialStart = digMarkerPerTrial(:,BPOD_START_); 
+
+choiceAll = digMarkerPerTrial(:, [CHOICEL_, CHOICER_]);
+choiceAll = choiceAll(:);
+choiceAll = sort(choiceAll(~isnan(choiceAll)));
 
 % % Debug
 % figure(); plot(goCue,1,'g>'); hold on; plot(iti,2,'k*'); plot(sTrig,0,'bo'); ylim([-2 5]);
@@ -151,7 +157,7 @@ for f = 1:length(imecFolders)  % Save the same bitcode.mat to each imec folder
         sTrig = sTrig(trialNum);
         digMarkerPerTrial = digMarkerPerTrial(trialNum,:);
         save(fullFileNameDJ, ...
-            'bitcode', 'bitCodeS', 'goCue', 'sTrig', 'reward', 'choiceL', 'choiceR', 'iti', 'digMarkerPerTrial', ...
+            'bitcode', 'bitCodeS', 'goCue', 'sTrig', 'reward', 'choiceL', 'choiceR', 'choiceAll', 'iti', 'digMarkerPerTrial', ...
             'bpodTrialStart', 'zaberStepsUp', 'zaberStepsDwn', 'cameras', ...
             'chan', 'eventMarkerDur', ...
             'zaberPerTrial', 'cameraPerTrial', ...
@@ -159,7 +165,7 @@ for f = 1:length(imecFolders)  % Save the same bitcode.mat to each imec folder
         fprintf('Trial Number fixed!!\n')
     else
         save(fullFileNameDJ, ...
-            'bitcode', 'bitCodeS', 'goCue', 'sTrig', 'reward', 'choiceL', 'choiceR', 'iti', 'digMarkerPerTrial', ...
+            'bitcode', 'bitCodeS', 'goCue', 'sTrig', 'reward', 'choiceL', 'choiceR', 'choiceAll', 'iti', 'digMarkerPerTrial', ...
             'bpodTrialStart', 'zaberStepsUp', 'zaberStepsDwn', 'cameras', ...
             'zaberPerTrial', 'cameraPerTrial', ...
             'chan', 'eventMarkerDur' ...
