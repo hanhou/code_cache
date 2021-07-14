@@ -49,7 +49,7 @@ end
 bitcode = zeros(length(iti), bitCodeDigits);   % Use length iti to make sure (the last) trial has ended.
 
 % headings in datajoint pipeline, ephys.TrialEventType
-headings = {'bitcodestart', 'go', 'choice', 'choice', 'reward', 'trialend', 'bpodstart', 'zaberinposition'};
+headings = {'bitcodestart', 'go', 'choice', 'choice', 'reward', 'trialend', 'bpodstart', 'zaberready'};
 [STRIG_, GOCUE_, CHOICEL_, CHOICER_, REWARD_, ITI_, BPOD_START_, ZABER_IN_POS_] = deal(1,2,3,4,5,6,7,8);
 
 % Use iti as trial marker to exclude truncated trials
