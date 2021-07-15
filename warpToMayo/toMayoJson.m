@@ -1,5 +1,6 @@
 %% Based on Dave's code
 %% Convert .csv from BigWarp to xyz_picks.json for Mayo's GUI
+%% Han Hou 2021
 
 [fNs, dirN] = uigetfile('f:\Z1\*.*', 'Multiselect', 'on'); 
 if ~iscell(fNs) fNs = {fNs}; end;
@@ -17,11 +18,17 @@ for ff = 1:length(fNs)
     csStruct=struct('xyz_picks',xyz_pick);
     
     % Convert file name to Mayo's convention (..._imecX_xyz_picks_shankX.json)
-    name = regexp(fN,'(.*imec\d)(_shank)?(\d)?.csv', 'tokens');
-    if length(name{1}) > 1
-        newName = sprintf('%s_xyz_picks%s%g.json', name{1}{1}, name{1}{2}, str2num(name{1}{3})+1);
+    name = regexp(fN,'(.*\d{4})_(\d)_?(\d)?', 'tokens');  
+    if isempty(name)
+        sprintf('Wrong file name: %s!!\n', fN);
+        continue
+    elseif isempty(name{1}{3})
+        imec = str2double(name{1}{2})-1;   % Mayo uses imec0, 1
+        newName = sprintf('%s_imec%g_xyz_picks.json', name{1}{1}, imec);  
     else
-        newName = sprintf('%s_xyz_picks.json', name{1}{1});
+        imec = str2double(name{1}{2})-1;   % Mayo uses imec0, 1
+        shank = str2double(name{1}{3});     % Mayo uses shank 1,2,3,4
+        newName = sprintf('%s_imec%g_xyz_picks_shank%g.json', name{1}{1}, imec, shank); 
     end
     
     % Save file
