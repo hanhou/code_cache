@@ -9,25 +9,30 @@ end
 bitCodeDigits = 20;
 
 chan.protocol = 2;  % Protocol dig marker channel
-eventMarkerDur.bitcodeEachbit = 1;
-eventMarkerDur.bitcodeFirstMultiplier = 1.5;  % The multiplier of the first bit code width
-eventMarkerDur.goCue = 10;
-eventMarkerDur.reward = 20;
-eventMarkerDur.ITI = 30;
+eventMarkerDur.bitcodeEachbit = '1';
+eventMarkerDur.bitcodeFirst = '1p5';  % The multiplier of the first bit code width
+eventMarkerDur.bitcodeFirstMultiplier = 1.5;
+
+eventMarkerDur.goCue = '10';
+eventMarkerDur.reward = '20';
+eventMarkerDur.ITI = '30';
 
 chan.behavior = 2;  % Behavior dig marker channel (I moved all behavior channel to bitcode channel in Apr 21 version)
-eventMarkerDur.choiceL = 2;  
-eventMarkerDur.choiceR = 2.5;
+eventMarkerDur.choiceL = '2';  
+eventMarkerDur.choiceR = '2p5';
 
 chan.bpodstart = 1;
 chan.zaber = 4;
 chan.cameras = [5, 6, 7];
 chan.cameraNameInDJ = {'Camera 1', 'Camera 0', 'Camera 2'};   % (From bottom to up): Chameleon3 CM3-U3-13Y3M-CS (FLIR); 
                                                               % 300 Hz Bottom face, 300 Hz Side face, 100 Hz Body
+                                                              
+chan.leftLick = 1; % XA
+chan.rightLick = 2;  % XA
 
 %% get Ephys Bitcode
 % Start of a trial (onset of my bitcode is indicated by twice of the bitcode width)
-sTrig = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.bitcodeEachbit * eventMarkerDur.bitcodeFirstMultiplier)); 
+sTrig = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.bitcodeFirst)); 
 iti = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.ITI));
 
 bitsAll = dlmread(getTxtFileName(sessionDir, chan.protocol, eventMarkerDur.bitcodeEachbit));
@@ -37,16 +42,30 @@ choiceL = dlmread(getTxtFileName(sessionDir, chan.behavior, eventMarkerDur.choic
 choiceR = dlmread(getTxtFileName(sessionDir, chan.behavior, eventMarkerDur.choiceR));
 choiceR = setdiff(choiceR, choiceL);   % 2.5 * (1-20%) = 2.0!!! choice R also includes all choice L...
 
-bpodTrialStart = dlmread(getTxtFileName(sessionDir, chan.bpodstart, 0));
-zaberStepsUp = dlmread(getTxtFileName(sessionDir, chan.zaber, 0));
-zaberStepsDwn = dlmread(getTxtFileName(sessionDir, chan.zaber, 0, '.iXD'));
+bpodTrialStart = dlmread(getTxtFileName(sessionDir, chan.bpodstart, '0'));
+zaberStepsUp = dlmread(getTxtFileName(sessionDir, chan.zaber, '0'));
+zaberStepsDwn = dlmread(getTxtFileName(sessionDir, chan.zaber, '0', '.iXD'));
 zaberStepsAll = sort([zaberStepsUp; zaberStepsDwn]);
 
 for i = 1:length(chan.cameras)
-    cameras{i} = dlmread(getTxtFileName(sessionDir, chan.cameras(i), 0));
+    cameras{i} = dlmread(getTxtFileName(sessionDir, chan.cameras(i), '0'));
 end
 
 bitcode = zeros(length(iti), bitCodeDigits);   % Use length iti to make sure (the last) trial has ended.
+
+% All licks
+lickLFiles = getTxtFileName(sessionDir, chan.leftLick, '*', 'XA');
+lickRFiles = getTxtFileName(sessionDir, chan.rightLick, '*', 'XA');
+lickLAll = [];
+lickRAll = [];
+for f = 1:length(lickLFiles)
+    if dir(lickLFiles(f)).bytes > 0
+        lickLAll = union(lickLAll, dlmread(lickLFiles(f)));
+    end
+    if dir(lickRFiles(f)).bytes > 0
+        lickRAll = union(lickRAll, dlmread(lickRFiles(f)));
+    end
+end
 
 % headings in datajoint pipeline, ephys.TrialEventType
 headings = {'bitcodestart', 'go', 'choice', 'choice', 'reward', 'trialend', 'bpodstart', 'zaberready'};
@@ -56,6 +75,8 @@ headings = {'bitcodestart', 'go', 'choice', 'choice', 'reward', 'trialend', 'bpo
 digMarkerPerTrial = nan(length(iti), 8);  % [STrig, goCue, choiceL, choiceR, reward, ITI]
 zaberPerTrial = {};
 cameraPerTrial = {};
+lickLPerTrial = {};
+lickRPerTrial = {};
 
 % digMarkerPerTrial(:,[STRIG_, GOCUE_, ITI_]) = [sTrig, goCue, iti];  % Must exists 
 digMarkerPerTrial(:,ITI_) = iti;  % Must exists 
@@ -68,8 +89,9 @@ for i = 1:length(iti)  % Fill in digMarkerPerTrial
         
     % Parse bitcode
     bitHighThis = bitsAll(thisBitCodeStart < bitsAll & bitsAll < iti(i));
-    bitHighPositionThis = round((bitHighThis - thisBitCodeStart - (eventMarkerDur.bitcodeFirstMultiplier - 1) * eventMarkerDur.bitcodeEachbit * 1e-3) ...
-                                 / (2 * eventMarkerDur.bitcodeEachbit * 1e-3));
+    bitHighPositionThis = round((bitHighThis - thisBitCodeStart - ...
+        (eventMarkerDur.bitcodeFirstMultiplier - 1) * str2double(eventMarkerDur.bitcodeEachbit) * 1e-3) ...
+                                 / (2 * str2double(eventMarkerDur.bitcodeEachbit) * 1e-3));
     
     % Bitcode bugfix
     if contains(sessionDir, 'HH09_S06_20210609') && i == 97
@@ -105,6 +127,10 @@ for i = 1:length(iti)  % Fill in digMarkerPerTrial
     % zaber steps (only forward protraction pulses)
     zaberPerTrial{i} = zaberStepsAll(thisBitCodeStart < zaberStepsAll & zaberStepsAll < iti(i));
     digMarkerPerTrial(i, ZABER_IN_POS_) = max(zaberPerTrial{i});   % The last zaber pulse of this trial
+    
+    % all licks
+    lickLPerTrial{i} = lickLAll(thisBitCodeStart < lickLAll & lickLAll < iti(i));
+    lickRPerTrial{i} = lickRAll(thisBitCodeStart < lickRAll & lickRAll < iti(i));
      
 end
 
@@ -166,6 +192,7 @@ for f = 1:length(imecFolders)  % Save the same bitcode.mat to each imec folder
             'bpodTrialStart', 'zaberStepsUp', 'zaberStepsDwn', 'cameras', ...
             'chan', 'eventMarkerDur', ...
             'zaberPerTrial', 'cameraPerTrial', ...
+            'lickLAll', 'lickRAll', 'lickLPerTrial', 'lickRPerTrial', ...
             'trialNum');
         fprintf('Trial Number fixed!!\n')
     else
@@ -174,7 +201,8 @@ for f = 1:length(imecFolders)  % Save the same bitcode.mat to each imec folder
             'digMarkerPerTrial', 'headings',...
             'bpodTrialStart', 'zaberStepsUp', 'zaberStepsDwn', 'cameras', ...
             'chan', 'eventMarkerDur', ...
-            'zaberPerTrial', 'cameraPerTrial' ...
+            'zaberPerTrial', 'cameraPerTrial', ...
+            'lickLAll', 'lickRAll', 'lickLPerTrial', 'lickRPerTrial' ...
             );
     end
     
@@ -188,21 +216,19 @@ for f = 1:length(imecFolders)  % Save the same bitcode.mat to each imec folder
     
 end
 
-function txtFile = getTxtFileName(sessionDir, chan, duration, chanTypeOverride)
+function output = getTxtFileName(sessionDir, chan, durationStr, chanTypeOverride)
 if nargin < 4
     chanTypeOverride = '.XD';
-end
-% Parse non-integer duration
-if mod(duration,1)
-    durationStr = sprintf('%gp%g', floor(duration), mod(duration,1)*10);
-else
-    durationStr = sprintf('%g', duration);
 end
 
 txtFile = dir(fullfile(sessionDir, sprintf('*%s*%g_%s.adj.txt', chanTypeOverride, chan, durationStr)));  % Try TPrime adjusted first
 if isempty(txtFile)  % If no adj.txt, try raw txt
     txtFile = dir(fullfile(sessionDir, sprintf('*%s*%g_%s.txt', chanTypeOverride, chan, durationStr)));
     fprintf('No _adj.txt found, using non-adjusted version');
-end    
-txtFile = fullfile(txtFile.folder, txtFile.name);
+end
+
+output = strings(1,length(txtFile));
+for f = 1:length(txtFile)
+    output(f) = fullfile(txtFile(f).folder, txtFile(f).name);
+end
     
