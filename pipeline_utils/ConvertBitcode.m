@@ -54,18 +54,8 @@ end
 bitcode = zeros(length(iti), bitCodeDigits);   % Use length iti to make sure (the last) trial has ended.
 
 % All licks
-lickLFiles = getTxtFileName(sessionDir, chan.leftLick, '*', 'XA');
-lickRFiles = getTxtFileName(sessionDir, chan.rightLick, '*', 'XA');
-lickLAll = [];
-lickRAll = [];
-for f = 1:length(lickLFiles)
-    if dir(lickLFiles(f)).bytes > 0
-        lickLAll = union(lickLAll, dlmread(lickLFiles(f)));
-    end
-    if dir(lickRFiles(f)).bytes > 0
-        lickRAll = union(lickRAll, dlmread(lickRFiles(f)));
-    end
-end
+lickLAll = dlmread(getTxtFileName(sessionDir, chan.leftLick, '0', 'XA'));
+lickRAll = dlmread(getTxtFileName(sessionDir, chan.rightLick, '0', 'XA'));
 
 % headings in datajoint pipeline, ephys.TrialEventType
 headings = {'bitcodestart', 'go', 'choice', 'choice', 'reward', 'trialend', 'bpodstart', 'zaberready'};
