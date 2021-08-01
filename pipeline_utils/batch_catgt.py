@@ -7,6 +7,7 @@ Han @ Aug 2021
 """
 
 import re
+import os
 import glob
 import subprocess
 
@@ -16,7 +17,7 @@ data_root_path = r'h:\HH100'
 
 # If empty, output files will be stored in the original folders,
 # otherwise, in conventional CatGt folders structure.
-output_folder = r'f:\Test'  
+output_folder = r'f:\Test'
 
 include_keywords = []  # If not empty, only search folders with the names, e.g., ['surface', '202101']
 exclude_keywords = []  # If not empty, exclude folders with the names
@@ -28,6 +29,9 @@ catgt_cmd = f'-lf -lfhipass=.1 -lflopass=300 -tshift -maxsecs={max_secs}'
 
 # Get all folders with the pattern *g*_imec* recursively
 imec_folders = glob.glob(data_root_path + '/**/*g*_imec*', recursive=True)
+if output_folder: 
+    os.makedirs(output_folder, exist_ok=True)
+
 output_cmd = f'-out_prb_fld -dest={output_folder}' if output_folder else ''
 n_probe = 0
 
