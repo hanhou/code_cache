@@ -18,7 +18,7 @@ exclude_list = []
 for root, subdirs, files in os.walk(root_path):
     for subdir in subdirs:
         if 'ks2_orig' in subdir:
-            this_path = PATH_JOIN = os.path.join(root, subdir)
+            this_path = os.path.join(root, subdir)
             if not any(ee in this_path for ee in exclude_list):
                 print('Processing:', this_path, '...')
 

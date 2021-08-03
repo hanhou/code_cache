@@ -42,7 +42,7 @@ for imec in imec_folders:
         continue
 
     # Retrieve dir, run, g, prb
-    m = re.search(r'(.*)\\(.*)\\(\w+)_g(\d+)_imec(\d+)', imec)
+    m = re.search(r'(.*)[\\|/](.*)[\\|/](\w+)_g(\d+)_imec(\d+)', imec)
     if not m:
         print(f' !! Errors in parsing folder {imec}')
         continue
