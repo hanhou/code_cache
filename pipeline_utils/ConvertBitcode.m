@@ -9,17 +9,17 @@ end
 bitCodeDigits = 20;
 
 chan.protocol = 2;  % Protocol dig marker channel
-eventMarkerDur.bitcodeEachbit = '1';
-eventMarkerDur.bitcodeFirst = '1p5';  % The multiplier of the first bit code width
-eventMarkerDur.bitcodeFirstMultiplier = 1.5;
+eventMarkerDur.bitcodeEachbit = '10';
+eventMarkerDur.bitcodeFirst = '20';  % The multiplier of the first bit code width
+eventMarkerDur.bitcodeFirstMultiplier = 2;
 
-eventMarkerDur.goCue = '10';
-eventMarkerDur.reward = '20';
-eventMarkerDur.ITI = '30';
+eventMarkerDur.goCue = '1';
+eventMarkerDur.reward = '30';
+eventMarkerDur.ITI = '40';
 
 chan.behavior = 2;  % Behavior dig marker channel (I moved all behavior channel to bitcode channel in Apr 21 version)
 eventMarkerDur.choiceL = '2';  
-eventMarkerDur.choiceR = '2p5';
+eventMarkerDur.choiceR = '3';
 
 chan.bpodstart = 1;
 chan.zaber = 4;
