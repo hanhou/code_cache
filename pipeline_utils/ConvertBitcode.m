@@ -27,8 +27,10 @@ chan.cameras = [5, 6, 7];
 chan.cameraNameInDJ = {'Camera 1', 'Camera 0', 'Camera 2'};   % (From bottom to up): Chameleon3 CM3-U3-13Y3M-CS (FLIR); 
                                                               % 300 Hz Bottom face, 300 Hz Side face, 100 Hz Body
                                                               
-chan.leftLick = 1; % XA
-chan.rightLick = 2;  % XA
+chan.leftLaser = 1; % XA
+chan.rightLaser = 2;  % XA
+chan.leftLick = 3; % XA
+chan.rightLick = 4;  % XA
 
 %% get Ephys Bitcode
 % Start of a trial (onset of my bitcode is indicated by twice of the bitcode width)
@@ -56,6 +58,10 @@ bitcode = zeros(length(iti), bitCodeDigits);   % Use length iti to make sure (th
 % All licks
 lickLAll = dlmread(getTxtFileName(sessionDir, chan.leftLick, '0', 'XA'));
 lickRAll = dlmread(getTxtFileName(sessionDir, chan.rightLick, '0', 'XA'));
+
+% Laser pulses
+laserLAll = dlmread(getTxtFileName(sessionDir, chan.leftLaser, '0', 'XA'));
+laserRAll = dlmread(getTxtFileName(sessionDir, chan.rightLaser, '0', 'XA'));
 
 % headings in datajoint pipeline, ephys.TrialEventType
 headings = {'bitcodestart', 'go', 'choice', 'choice', 'reward', 'trialend', 'bpodstart', 'zaberready'};
@@ -132,6 +138,15 @@ for i = 1:length(iti)  % Fill in digMarkerPerTrial
     % all licks
     lickLPerTrial{i} = lickLAll(thisBitCodeStart < lickLAll & lickLAll < iti(i));
     lickRPerTrial{i} = lickRAll(thisBitCodeStart < lickRAll & lickRAll < iti(i));
+    
+    % photo stimulation (from this trial start to next trial start, including the iti of this trial)
+    if i < length(iti)
+        nextTrialStart = sTrig(find(sTrig < iti(i + 1), 1, 'last'));
+    else
+        nextTrialStart = Inf;
+    end
+    laserLPerTrial{i} = laserLAll(thisBitCodeStart < laserLAll & laserLAll < nextTrialStart);
+    laserRPerTrial{i} = laserRAll(thisBitCodeStart < laserRAll & laserRAll < nextTrialStart);
      
 end
 
@@ -198,6 +213,7 @@ for f = 1:length(imecFolders)  % Save the same bitcode.mat to each imec folder
             'chan', 'eventMarkerDur', ...
             'zaberPerTrial', 'cameraPerTrial', ...
             'lickLAll', 'lickRAll', 'lickLPerTrial', 'lickRPerTrial', ...
+            'laserLPerTrial', 'laserRPerTrial', ...
             'trialNum');
         fprintf('Trial Number fixed!!\n')
     else
@@ -207,7 +223,8 @@ for f = 1:length(imecFolders)  % Save the same bitcode.mat to each imec folder
             'bpodTrialStart', 'zaberStepsUp', 'zaberStepsDwn', 'cameras', ...
             'chan', 'eventMarkerDur', ...
             'zaberPerTrial', 'cameraPerTrial', ...
-            'lickLAll', 'lickRAll', 'lickLPerTrial', 'lickRPerTrial' ...
+            'lickLAll', 'lickRAll', 'lickLPerTrial', 'lickRPerTrial', ...
+            'laserLPerTrial', 'laserRPerTrial' ...
             );
     end
     
@@ -229,7 +246,7 @@ end
 txtFile = dir(fullfile(sessionDir, sprintf('*%s*%g_%s.adj.txt', chanTypeOverride, chan, durationStr)));  % Try TPrime adjusted first
 if isempty(txtFile)  % If no adj.txt, try raw txt
     txtFile = dir(fullfile(sessionDir, sprintf('*%s*%g_%s.txt', chanTypeOverride, chan, durationStr)));
-    fprintf('No _adj.txt found, using non-adjusted version');
+    fprintf('No _adj.txt found, using non-adjusted version\n');
 end
 
 output = strings(1,length(txtFile));
