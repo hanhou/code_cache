@@ -2,7 +2,7 @@
 function ConvertBitcode(sessionDir)
 %% Settings
 if nargin == 0
-    sessionDir=uigetdir('F:\catGT\');
+    sessionDir=uigetdir('I:\catGT\');
 end
 
 % In line with my pybpod code
@@ -70,6 +70,7 @@ lickRPerTrial = {};
 
 % digMarkerPerTrial(:,[STRIG_, GOCUE_, ITI_]) = [sTrig, goCue, iti];  % Must exists 
 digMarkerPerTrial(:,ITI_) = iti;  % Must exists 
+countFakeZaberStep = 0;
 
 for i = 1:length(iti)  % Fill in digMarkerPerTrial
     thisBitCodeStart = sTrig(find(sTrig < iti(i), 1, 'last'));  % Deal with truncated trials (only search backward from each iti)
@@ -116,7 +117,17 @@ for i = 1:length(iti)  % Fill in digMarkerPerTrial
     
     % zaber steps (only forward protraction pulses)
     zaberPerTrial{i} = zaberStepsAll(thisBitCodeStart < zaberStepsAll & zaberStepsAll < iti(i));
-    digMarkerPerTrial(i, ZABER_IN_POS_) = max(zaberPerTrial{i});   % The last zaber pulse of this trial
+    if isempty(zaberPerTrial{i})
+        % For some rare cases where zaber feedback were missing, fake the
+        % last zaber step
+        fakeZaberStep = thisBitCodeStart + (2 * str2double(eventMarkerDur.bitcodeEachbit) * bitCodeDigits ...
+            + str2double(eventMarkerDur.bitcodeFirst))/1000 + 0.136; 
+        zaberPerTrial{i} = fakeZaberStep;
+        digMarkerPerTrial(i, ZABER_IN_POS_) = fakeZaberStep;
+        countFakeZaberStep = countFakeZaberStep + 1;
+    else
+        digMarkerPerTrial(i, ZABER_IN_POS_) = max(zaberPerTrial{i});   % The last zaber pulse of this trial
+    end
     
     % all licks
     lickLPerTrial{i} = lickLAll(thisBitCodeStart < lickLAll & lickLAll < iti(i));
@@ -135,6 +146,10 @@ for i = 1:length(iti)  % Fill in camera pulses
     for cc = 1:length(chan.cameras)
         cameraPerTrial{cc}{i} = cameras{cc}(thisStart < cameras{cc} & cameras{cc} < thisEnd);
     end
+end
+
+if countFakeZaberStep > 0
+    fprintf('Zaber steps faked for %g trials!\n', countFakeZaberStep)
 end
 
 bitCodeS = num2str(bitcode, '%d');
