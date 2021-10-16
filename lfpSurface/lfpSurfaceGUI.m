@@ -5,7 +5,7 @@ function [lfpCorrCoef, lfpSurfaceChAuto] = lfpSurfaceGUI(lfpFilename, lfpPara)
 
 nClips = 10;
 clipDurMax = 2; % seconds
-startTime = 3; % skip first seconds
+startTime = 5; % skip first seconds
 
 lfpFs = lfpPara.Fs;  % sampling rate of lfp
 nChansInFile = lfpPara.nChansInFile; 
@@ -18,7 +18,7 @@ d = dir(lfpFilename);
 nSamps = d.bytes/2/nChansInFile;
 nClipSamps = round(lfpFs*clipDurMax);
 % sampStarts = round(linspace(lfpFs*startTime, nSamps-nClipSamps, nClips+1));    % Regular interval
-sampStarts = round(rand(1,nClips+1) * (nSamps-nClipSamps - lfpFs*startTime));    % Random
+sampStarts = sort(round(rand(1,nClips+1) * (nSamps- nClipSamps - lfpFs*startTime)));    % Random
 
 nClipSamps = min(round(lfpFs*clipDurMax), diff(sampStarts(1:2)));  % Ensure the clips are not over-lapped (for short file)
 
@@ -66,7 +66,11 @@ for n = 1:nClips
     end
         
     % Power spectrum
-    [Pxx, F] = myTimePowerSpectrumMat(thisDat', lfpFs);
+    try
+        [Pxx, F] = myTimePowerSpectrumMat(thisDat', lfpFs);
+    catch
+        keyboard;
+    end
     if n==1
         allPowerEst = zeros(size(Pxx,1), size(Pxx,2), nClips);
     end
@@ -176,8 +180,8 @@ linkaxes([myData.ax(4) myData.ax(5)], 'x')
 
 function drawRaw(depthOnProbe, samplingRate, rawDat, lfpSurfaceCh, lfpSurfaceChUser, ax, gain)
 myData = get(gcf, 'UserData');
-nChBelow = 20;
-nChAbove = 10;
+nChBelow = 25;
+nChAbove = 15;
 if ~isnan(lfpSurfaceChUser)
     [~, surfaceIdx] = min(abs(depthOnProbe - lfpSurfaceChUser * myData.lfpPara.siteDistance/2));
 else
@@ -191,7 +195,7 @@ rawToDraw = reshape(rawToDraw, size(rawToDraw,1), [], 1);
 
 axes(ax); cla; hold on;
 if nargin < 7
-    gain = 1/range(rawToDraw(:)) * mean(diff(depthOnProbe)) * 3;
+    gain = 1/range(rawToDraw(:)) * mean(diff(depthOnProbe)) * 7;
 end
 
 for dd = 1:length(drawRange)
@@ -203,13 +207,14 @@ end
 xlabel('Time (ms)')
 axis tight; ylimTmp = ylim();
 drawSurfaceLines(lfpSurfaceCh, lfpSurfaceChUser);
-xlim([0 2000]);
+xlim([0 5000]);
 ylim(ylimTmp);
 ylabel('Distance to probe tip (um)');
 
 % -- Annotation --
-title(sprintf('LFP surface channel:\nauto = %g, \\color{red}user-defined = %g\n', ...
-    myData.lfpSurfaceCh, lfpSurfaceChUser));
+title(sprintf('LFP surface channel:\nauto = %g (%g), \\color{red}user-defined = %g (%g)\n', ...
+    myData.lfpSurfaceCh, myData.lfpSurfaceCh * myData.lfpPara.siteDistance/2, ...
+    lfpSurfaceChUser, lfpSurfaceChUser * myData.lfpPara.siteDistance/2 ));
 
 % Add callback
 set(ax, 'ButtonDownFcn', {@newUserSurface});
