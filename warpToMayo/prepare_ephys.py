@@ -12,15 +12,15 @@ import os
 
 # root_path = r'i:\HH102\catgt_HH102S10_C04P02_g0\HH102S10_C04P02_g0_imec0'
 # root_path = r'V:\Ingested\SC045\catgt_SC045_120920_g0\SC045_120920_g0_imec0'
-root_path = r'i:\catGT\HH08'
+root_path = r'j:\HH09'
 exclude_list = []
 
 for root, subdirs, files in os.walk(root_path):
     for subdir in subdirs:
-        if 'ks2_orig' in subdir:
+        if 'ks2' in subdir and 'orig' not in subdir:
             this_path = os.path.join(root, subdir)
             if not any(ee in this_path for ee in exclude_list):
-                print('Processing:', this_path, '...')
+                print('\n\nProcessing:', this_path, '...')
 
                 # Path to KS2 output
                 ks_path = Path(this_path)  # Using the original ks2 output is recommended!
