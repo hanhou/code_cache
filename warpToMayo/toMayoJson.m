@@ -2,13 +2,19 @@
 %% Convert .csv from BigWarp to xyz_picks.json for Mayo's GUI
 %% Han Hou 2021
 
+% --------- NOTE ---------
+% For some historical reason, we should use LR-flipped .csv files (by
+% TrackFinder) to convert to IBL GUI, do alignment, and do ingestion.
+% Otherwise it will be inconsistent with our current convention (which is weird by
+% itself) in DJ.
+
 % Name format
 % NP1.0 and 2.1: "landmarks_HH08_20210819_1.csv"
 % NP2.4:         "landmarks_HH08_20210824_1_1.csv"
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [fNs, dirN] = uigetfile('f:\*.*', 'Multiselect', 'on'); 
-alf_root_folder = 'i:\catGT\HH08\';  % If not empty, automatically copy the .json file to corresponding alf folders
+alf_root_folder = 'i:\HH13\';  % If not empty, automatically copy the .json file to corresponding alf folders
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if ~iscell(fNs) fNs = {fNs}; end;

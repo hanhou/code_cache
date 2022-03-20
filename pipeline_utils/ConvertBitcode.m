@@ -60,8 +60,17 @@ lickLAll = dlmread(getTxtFileName(sessionDir, chan.leftLick, '0', 'XA'));
 lickRAll = dlmread(getTxtFileName(sessionDir, chan.rightLick, '0', 'XA'));
 
 % Laser pulses
-laserLAll = dlmread(getTxtFileName(sessionDir, chan.leftLaser, '0', 'XA'));
-laserRAll = dlmread(getTxtFileName(sessionDir, chan.rightLaser, '0', 'XA'));
+try
+    laserLAll = dlmread(getTxtFileName(sessionDir, chan.leftLaser, '0', 'XA'));
+catch % In case there are no laser pulses
+    laserLAll = [];
+end
+
+try
+    laserRAll = dlmread(getTxtFileName(sessionDir, chan.rightLaser, '0', 'XA'));
+catch % In case there are no laser pulses
+    laserRAll = [];
+end
 
 % headings in datajoint pipeline, ephys.TrialEventType
 headings = {'bitcodestart', 'go', 'choice', 'choice', 'reward', 'trialend', 'bpodstart', 'zaberready'};
@@ -80,6 +89,12 @@ countFakeZaberStep = 0;
 
 for i = 1:length(iti)  % Fill in digMarkerPerTrial
     thisBitCodeStart = sTrig(find(sTrig < iti(i), 1, 'last'));  % Deal with truncated trials (only search backward from each iti)
+    if i < length(iti)
+        nextBitCodeStart = sTrig(find(sTrig < iti(i + 1), 1, 'last'));
+    else
+        nextBitCodeStart = Inf;
+    end
+
     digMarkerPerTrial(i, BPOD_START_) = bpodTrialStart(find(bpodTrialStart < iti(i), 1, 'last'));   % The closest bpodTrialStart before this ITI
     digMarkerPerTrial(i, STRIG_) = thisBitCodeStart;
     digMarkerPerTrial(i, GOCUE_) = goCue(thisBitCodeStart < goCue & goCue < iti(i));
@@ -135,18 +150,13 @@ for i = 1:length(iti)  % Fill in digMarkerPerTrial
         digMarkerPerTrial(i, ZABER_IN_POS_) = max(zaberPerTrial{i});   % The last zaber pulse of this trial
     end
     
-    % all licks
-    lickLPerTrial{i} = lickLAll(thisBitCodeStart < lickLAll & lickLAll < iti(i));
-    lickRPerTrial{i} = lickRAll(thisBitCodeStart < lickRAll & lickRAll < iti(i));
+    % all licks (from this trial start to the next trial start, including iti after this trial; just in case where we don't retract lickports)
+    lickLPerTrial{i} = lickLAll(thisBitCodeStart < lickLAll & lickLAll < nextBitCodeStart);
+    lickRPerTrial{i} = lickRAll(thisBitCodeStart < lickRAll & lickRAll < nextBitCodeStart);
     
-    % photo stimulation (from this trial start to next trial start, including the iti of this trial)
-    if i < length(iti)
-        nextTrialStart = sTrig(find(sTrig < iti(i + 1), 1, 'last'));
-    else
-        nextTrialStart = Inf;
-    end
-    laserLPerTrial{i} = laserLAll(thisBitCodeStart < laserLAll & laserLAll < nextTrialStart);
-    laserRPerTrial{i} = laserRAll(thisBitCodeStart < laserRAll & laserRAll < nextTrialStart);
+    % photo stimulation (from this trial start to next trial start, including iti after this trial; Note: for laserXPerTrial{i}, we expect to see behavioral effects on trial i+1)
+    laserLPerTrial{i} = laserLAll(thisBitCodeStart < laserLAll & laserLAll < nextBitCodeStart);
+    laserRPerTrial{i} = laserRAll(thisBitCodeStart < laserRAll & laserRAll < nextBitCodeStart);
      
 end
 
