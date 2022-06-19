@@ -1,0 +1,2 @@
+from phy.apps.template import template_gui
+template_gui("G:\catGT\catgt_KH_FB12_photostimEphys01_20220518_g0_g0\KH_FB12_photostimEphys01_20220518_g0_g0_imec0\imec0_ks2\params.py")

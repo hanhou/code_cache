@@ -22,7 +22,7 @@ import os.path
 # ======== Settings =======
 # Settings
 
-local_sharepoint_sync_folder = R'C:/Users/admin/Allen Institute/Neural Dynamics - metadata'
+local_sharepoint_sync_folder = R'C:/Users/admin/OneDrive - Allen Institute/metadata'  # I made a shortcut to OneDrive in Teams
 remote_meta_file_animal = R'Surgery, water restriction and training.xlsx'
 remote_meta_file_lab = R'Lab metadata.xlsx'
     
