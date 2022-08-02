@@ -1,5 +1,5 @@
 %% Batch convert txt files from catGT to bitcode.mat files for phy and ingestion
-rootPath = 'K:\';
+rootPath = 'G:\';
 allSubFolder = dir(fullfile(rootPath, '**\*.*'));
 allSubFolder = allSubFolder([allSubFolder.isdir]);
 allSubFolder = allSubFolder(arrayfun(@(A)contains(A.name,'catgt'), allSubFolder));
