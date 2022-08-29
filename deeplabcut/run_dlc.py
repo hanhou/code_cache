@@ -27,22 +27,18 @@ to_generate_labeled_video_offline = False  # Number of example labeled videos to
 
 # Project
 prefix=R'G:\DLC'
-project=R'Foraging_Bot-Han_Lucas-2022-04-27'
-# project=R'SideView-Han_Lucas-2022-07-06'
-shuffle=1
+
+projects=[
+          {'file_must_include': 'bottom_face', 'project_path': R'Foraging_Bot-Han_Lucas-2022-04-27', 'shuffle': 3},
+          {'file_must_include': 'side_face',   'project_path': R'SideView-Han_Lucas-2022-07-06',     'shuffle': 1},
+         ]
 
 # To analyze
 basepath='Z:\ephys\HanHou\Video' #data'
 folder_must_have_pattern = R'.*_(S|photostim).*'
-folder_to_exclude = ['HH08', 'HH09', ]
-file_must_include = 'bottom_face'
-#file_must_include = 'side_face'
+folder_to_exclude = []
 
 # ===================================================    
-
-projectpath=os.path.join(prefix,project)
-config=os.path.join(projectpath,'config.yaml')
-subfolders=getsubfolders(basepath)
 
 
 def dlc_batch_analyze():
@@ -114,11 +110,18 @@ if __name__ == '__main__':
         cores = max(to_generate_labeled_video_online, to_generate_labeled_video_offline, 10)  # Auto core number selection
         pool = mp.Pool(processes=cores)  # For Windows, must be put inside "if __name__ == '__main__'" instead of any subfunctions
         
-    if if_analyze:
-        dlc_batch_analyze()
-        
-    if to_generate_labeled_video_offline:
-        dlc_batch_generate_labeled_videos_offline()
+    for project in projects:
+        file_must_include = project['file_must_include']
+        shuffle = project['shuffle']
+        projectpath=os.path.join(prefix, project['project_path'])
+        config=os.path.join(projectpath,'config.yaml')
+        subfolders=getsubfolders(basepath)
+
+        if if_analyze:
+            dlc_batch_analyze()
+            
+        if to_generate_labeled_video_offline:
+            dlc_batch_generate_labeled_videos_offline()
 
     if pool != '':
         pool.close()
