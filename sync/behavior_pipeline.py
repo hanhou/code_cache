@@ -30,6 +30,8 @@ dj_root = R'D:\Han_Sync\Svoboda\Scripts\map-ephys'
 # Root path to place bpod projects (should be the same as in dj_local_conf.json)
 behavioral_root = R'F:\Data_for_ingestion\Foraging_behavior\Behavior_rigs'
 
+isilon_root = R'\\allen\programs\aind\workgroups\ephys\HanHou\BehaviorRaw'
+
 # In Teams - Foraging Behavior - Files - Foraging training - metadata - ... (more options) - "Add shortcut to OneDrive", and locate the folder on your local PC
 local_sharepoint_sync_folder = R'C:/Users/admin/OneDrive - Allen Institute/metadata'
 remote_meta_file_animal = R'Surgery, water restriction and training.xlsx'
@@ -60,7 +62,7 @@ def sync_behavioral_folders():
     for rig in rigs:
         summary_start = False
         command = fR'''net use {rig['remote']} /u:{rig['user_name']} {rig['passcode']}&&'''\
-                  fR'''robocopy  {rig['remote']} {behavioral_root}\{rig['local']} /e /XD "experiments_exported" /xj /xjd /mt /np /Z /W:1 /R:5 /tee /fft /log+:{copy_log}&&'''\
+                  fR'''robocopy  {rig['remote']} {behavioral_root}\{rig['local']} /e /xx /XD "experiments_exported" "sessions_bak" /xj /xjd /mt /np /Z /W:1 /R:5 /tee /fft /log+:{copy_log}&&'''\
                   fR'''net use {rig['remote']} /d'''                   
                 
         log.info('')
@@ -83,6 +85,19 @@ def sync_behavioral_folders():
        
         exitcode = proc.wait() # Essential for robocopy
         log.info(f'Done with exitcode = {exitcode}\n')
+        
+def backup_to_isilon():
+    command = fR'''robocopy F:\Data_for_ingestion\Foraging_behavior {isilon_root} /e /XD "experiments_exported" /xj /mt /Z /W:1 /R:5 /tee /fft'''
+    proc = subprocess.Popen(command,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        shell=True,
+                        universal_newlines=True  # Output to console
+                        )
+    for line in proc.stdout:
+        sys.stdout.write(line)  # All output to console
+
+    proc.wait()
         
         
 def remote_meta_to_csvs(remote_notebook_name, local_meta_dir, transposed = False):
@@ -136,3 +151,6 @@ if __name__ == '__main__':
     
     # Ingest behavior to datajoint
     ingest_behavior()
+    
+    # Backup behavior to isilon
+    backup_to_isilon()
