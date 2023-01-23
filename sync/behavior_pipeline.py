@@ -18,8 +18,11 @@ import pandas as pd
 #=============================   Change me!!! ===============================
 # Address of remote training rig PCs
 rigs = [
-    {'local': 'AIND-Tower-1', 'remote': R'\\10.128.201.225\Documents\Pybpod\Projects', 'user_name': 'labadmin', 'passcode': 'cupcake'},
+    #{'local': 'AIND-Tower-1', 'remote': R'\\10.128.37.23\Documents\Pybpod\Projects', 'user_name': 'labadmin', 'passcode': 'cupcake'},
+    {'local': 'AIND-Tower-1', 'remote': R'\\10.128.37.23\Documents\Pybpod', 'user_name': 'labadmin', 'passcode': 'cupcake'},
     {'local': 'AIND-Tower-2', 'remote': R'\\10.128.200.146\Users\labadmin\Documents\foraging_projects\Projects', 'user_name': 'labadmin', 'passcode': 'cupcake'},
+    {'local': 'AIND-Tower-2', 'remote': R'\\10.128.200.146\Users\labadmin\Documents\PyBpod', 'user_name': 'labadmin', 'passcode': 'cupcake'},
+    {'local': 'AIND-Tower-3', 'remote': R'\\10.128.201.183\Users\labadmin\Documents\PyBpod\Projects\DO_NOT_USE', 'user_name': 'labadmin', 'passcode': 'cupcake'}, #old loc
     {'local': 'AIND-Tower-3', 'remote': R'\\10.128.201.183\Users\labadmin\Documents\PyBpod\Projects', 'user_name': 'labadmin', 'passcode': 'cupcake'},
     {'local': 'AIND-Ephys-Han', 'remote': R'\\10.128.54.220\Users\Han2\Documents\Pybpod\Projects', 'user_name': 'Han2', 'passcode': 'cupcake'},
     {'local': 'AIND-Tower-4', 'remote': R'\\10.128.37.31\Users\aind_behavior\Documents\PyBpod', 'user_name': 'aind_behavior', 'passcode': 'TraiNINGlab587!'},
@@ -66,7 +69,7 @@ def sync_behavioral_folders():
     for rig in rigs:
         summary_start = False
         command = fR'''net use {rig['remote']} /u:{rig['user_name']} {rig['passcode']}&&'''\
-                  fR'''robocopy  {rig['remote']} {behavioral_root}\{rig['local']} /e /xx /XD "experiments_exported" "sessions_bak" /xj /xjd /mt /np /Z /W:1 /R:5 /tee /fft /log+:{copy_log}&&'''\
+                  fR'''robocopy  {rig['remote']} {behavioral_root}\{rig['local']} /e /xx /XD "experiments_exported" "sessions_bak" "old_stuff" /xj /xjd /mt /np /Z /W:1 /R:5 /tee /fft /log+:{copy_log}&&'''\
                   fR'''net use {rig['remote']} /d'''                   
                 
         log.info('')
