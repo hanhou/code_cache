@@ -68,9 +68,10 @@ def sync_behavioral_folders():
     
     for rig in rigs:
         summary_start = False
-        command = fR'''net use {rig['remote']} /u:{rig['user_name']} {rig['passcode']}&&'''\
+        command = fR'''net use {rig['remote']}&&'''\
                   fR'''robocopy  {rig['remote']} {behavioral_root}\{rig['local']} /e /xx /XD "experiments_exported" "sessions_bak" "old_stuff" /xj /xjd /mt /np /Z /W:1 /R:5 /tee /fft /log+:{copy_log}&&'''\
-                  fR'''net use {rig['remote']} /d'''                   
+                  fR'''net use {rig['remote']} /d'''         
+                   ##fR'''net use {rig['remote']} /u:{rig['user_name']} {rig['passcode']}&&'''\          
                 
         log.info('')
         log.info(f'''===== Sync "{rig['local']}" from {rig['remote']} ===== ''')
@@ -144,9 +145,7 @@ def ingest_behavior():
                 
 if __name__ == '__main__':
     
-    # Copy behavioral folders from remote PCs to local
-    sync_behavioral_folders()
-    
+  
     # Copy SharePoint spreadsheets meta info to local
     log.info('Updating surgery and WR metadata from Sharepoint sync folder...')
     remote_meta_to_csvs(remote_meta_file_animal, local_meta_dir_animal)
@@ -156,8 +155,11 @@ if __name__ == '__main__':
     remote_meta_to_csvs(remote_meta_file_lab, local_meta_dir_lab)
     log.info('done!\n')
     
+    # Copy behavioral folders from remote PCs to local
+    sync_behavioral_folders()
+    
     # Ingest behavior to datajoint
     ingest_behavior()
     
     # Backup behavior to isilon
-    backup_to_isilon()
+    # backup_to_isilon()
