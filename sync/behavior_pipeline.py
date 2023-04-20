@@ -68,7 +68,7 @@ def sync_behavioral_folders():
     
     for rig in rigs:
         summary_start = False
-        command = fR'''net use {rig['remote']}&&'''\
+        command = fR'''net use {rig['remote']} /u:{rig['user_name']} {rig['passcode']}&&'''\
                   fR'''robocopy  {rig['remote']} {behavioral_root}\{rig['local']} /e /xx /XD "experiments_exported" "sessions_bak" "old_stuff" /xj /xjd /mt /np /Z /W:1 /R:5 /tee /fft /log+:{copy_log}&&'''\
                   fR'''net use {rig['remote']} /d'''         
                    ##fR'''net use {rig['remote']} /u:{rig['user_name']} {rig['passcode']}&&'''\          
@@ -134,7 +134,8 @@ def remote_meta_to_csvs(remote_notebook_name, local_meta_dir, transposed = False
             
 def ingest_behavior():
     os.chdir(dj_root)
-    from pipeline.shell import load_meta_foraging, ingest_foraging_behavior
+    from pipeline.shell import load_meta_foraging, ingest_foraging_behavior, logsetup
+    logsetup('INFO')
     
     try:
         load_meta_foraging()
