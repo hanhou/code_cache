@@ -9,10 +9,10 @@ from pynwb.epoch import TimeIntervals
 from pynwb.file import Subject
 from scipy.io import loadmat
 
-SaveFolder='H:\\NWBFile\\'
+SaveFolder=R'F:\Data_for_ingestion\Foraging_behavior\Bonsai'
 
 ######## load the Json/Mat file #######
-fname='E:\BonsaiForaging\Data\LA30\LA30_2023-04-27.mat'
+fname=R'F:\Data_for_ingestion\Foraging_behavior\Bonsai\668463\668463_2023-07-07.json'
 
 if fname.endswith('.mat'):
     Obj = loadmat(fname)
@@ -120,7 +120,8 @@ nwbfile.add_trial_column(name='response_duration', description=f'The maximum tim
 # reward consumption duration
 nwbfile.add_trial_column(name='reward_consumption_duration', description=f'The duration for the animal to consume the reward')
 # auto water
-nwbfile.add_trial_column(name='auto_water', description=f'Whether the current trial was a auto water trial or not')
+nwbfile.add_trial_column(name='auto_waterL', description=f'Autowater given at Left')
+nwbfile.add_trial_column(name='auto_waterR', description=f'Autowater given at Right')
 # optogenetics
 nwbfile.add_trial_column(name='laser_on_trial', description=f'Trials with laser stimulation')
 nwbfile.add_trial_column(name='laser_wavelength', description=f'The wavelength of laser or LED')
@@ -213,7 +214,8 @@ for i in range(len(obj.B_TrialEndTime)):
                         ITI_duration=obj.B_ITIHistory[i],
                         response_duration=float(obj.TP_ResponseTime[i]),
                         reward_consumption_duration=float(obj.TP_RewardConsumeTime[i]),
-                        auto_water=obj.B_AutoWaterTrial[i],
+                        auto_waterL=obj.B_AutoWaterTrial[0][i],
+                        auto_waterR=obj.B_AutoWaterTrial[0][i],
                         laser_on_trial=obj.B_LaserOnTrial[i],
                         laser_wavelength=LaserWavelengthC,
                         laser_location=LaserLocationC,
