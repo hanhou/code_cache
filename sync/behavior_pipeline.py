@@ -31,6 +31,8 @@ rigs = [
     {'local': 'AIND-Tower-7', 'remote': R'\\10.128.41.8\Users\aind_behavior\Documents\PyBpod', 'user_name': 'aind_behavior', 'passcode': 'TraiNINGlab587!'},
 ]
 
+# Solve connection bugs: https://stackoverflow.com/questions/24933661/multiple-connections-to-a-server-or-shared-resource-by-the-same-user-using-more
+
 # Path of dj config
 dj_root = R'D:\Han_Sync\Svoboda\Scripts\map-ephys'
 
