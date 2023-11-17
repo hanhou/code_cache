@@ -14,22 +14,38 @@ import json
 import datetime
 import os.path
 import pandas as pd
+import json
+
+#%%
+def get_passcode(rigs):
+    ''' Get passcode for remote PCs from json
+    '''
+    with open(os.path.dirname(os.path.abspath(__file__)) + '\passcode.json') as f:
+        passcode = json.load(f)
+        
+    for rig in rigs:
+        rig['passcode'] = passcode[rig['remote'].split('\\\\')[1].split('\\')[0]]
+ 
 
 #=============================   Change me!!! ===============================
 # Address of remote training rig PCs
 rigs = [
-    #{'local': 'AIND-Tower-1', 'remote': R'\\10.128.37.23\Documents\Pybpod\Projects', 'user_name': 'labadmin', 'passcode': 'cupcake'},
-    {'local': 'AIND-Tower-1', 'remote': R'\\10.128.37.23\Documents\Pybpod', 'user_name': 'labadmin', 'passcode': 'cupcake'},
-    {'local': 'AIND-Tower-2', 'remote': R'\\10.128.200.146\Users\labadmin\Documents\foraging_projects\Projects', 'user_name': 'labadmin', 'passcode': 'cupcake'},
-    {'local': 'AIND-Tower-2', 'remote': R'\\10.128.200.146\Users\labadmin\Documents\PyBpod', 'user_name': 'labadmin', 'passcode': 'cupcake'},
-    {'local': 'AIND-Tower-3', 'remote': R'\\10.128.203.121\Users\labadmin\Documents\PyBpod\Projects\DO_NOT_USE', 'user_name': 'labadmin', 'passcode': 'cupcake'}, #old loc
-    {'local': 'AIND-Tower-3', 'remote': R'\\10.128.203.121\Users\labadmin\Documents\PyBpod\Projects', 'user_name': 'labadmin', 'passcode': 'cupcake'},
-    {'local': 'AIND-Ephys-Han', 'remote': R'\\10.128.54.220\Users\Han2\Documents\Pybpod\Projects', 'user_name': 'Han2', 'passcode': 'cupcake'},
-    {'local': 'AIND-Tower-4', 'remote': R'\\10.128.37.31\Users\aind_behavior\Documents\PyBpod', 'user_name': 'aind_behavior', 'passcode': 'TraiNINGlab587!'},
-    {'local': 'AIND-Tower-5', 'remote': R'\\10.128.41.7\Users\aind_behavior\Documents\PyBpod', 'user_name': 'aind_behavior', 'passcode': 'TraiNINGlab587!'},   
-    {'local': 'AIND-Tower-6', 'remote': R'\\10.128.37.30\Users\aind_behavior\Documents\PyBpod', 'user_name': 'aind_behavior', 'passcode': 'TraiNINGlab587!'},
-    {'local': 'AIND-Tower-7', 'remote': R'\\10.128.41.8\Users\aind_behavior\Documents\PyBpod', 'user_name': 'aind_behavior', 'passcode': 'TraiNINGlab587!'},
+    #{'local': 'AIND-Tower-1', 'remote': R'\\10.128.37.23\Documents\Pybpod\Projects', 'user_name': 'labadmin'},
+    {'local': 'AIND-Tower-1', 'remote': R'\\10.128.37.23\Documents\Pybpod', 'user_name': 'labadmin'},
+    {'local': 'AIND-Tower-2', 'remote': R'\\10.128.200.146\Users\labadmin\Documents\foraging_projects\Projects', 'user_name': 'labadmin'},
+    {'local': 'AIND-Tower-2', 'remote': R'\\10.128.200.146\Users\labadmin\Documents\PyBpod', 'user_name': 'labadmin'},
+    {'local': 'AIND-Tower-3', 'remote': R'\\10.128.203.121\Users\labadmin\Documents\PyBpod\Projects\DO_NOT_USE', 'user_name': 'labadmin'}, #old loc
+    {'local': 'AIND-Tower-3', 'remote': R'\\10.128.203.121\Users\labadmin\Documents\PyBpod\Projects', 'user_name': 'labadmin'},
+    {'local': 'AIND-Ephys-Han', 'remote': R'\\10.128.54.220\Users\Han2\Documents\Pybpod\Projects', 'user_name': 'Han2'},
+    {'local': 'AIND-Tower-4', 'remote': R'\\10.128.37.31\Users\aind_behavior\Documents\PyBpod', 'user_name': 'aind_behavior'},
+    {'local': 'AIND-Tower-5', 'remote': R'\\10.128.41.7\Users\aind_behavior\Documents\PyBpod', 'user_name': 'aind_behavior'},   
+    {'local': 'AIND-Tower-6', 'remote': R'\\10.128.37.30\Users\aind_behavior\Documents\PyBpod', 'user_name': 'aind_behavior'},
+    {'local': 'AIND-Tower-7', 'remote': R'\\10.128.41.8\Users\aind_behavior\Documents\PyBpod', 'user_name': 'aind_behavior'},
 ]
+
+get_passcode(rigs)
+
+#%%
 
 # Solve connection bugs: https://stackoverflow.com/questions/24933661/multiple-connections-to-a-server-or-shared-resource-by-the-same-user-using-more
 
